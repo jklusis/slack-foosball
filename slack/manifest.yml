@@ -1,0 +1,21 @@
+display_information:
+  name: Foosball
+  description: Let's play Table Foosball! 1v1 or 2v2 supported, with statistics and ELO tracking
+  background_color: "#1b5e20"
+features:
+  bot_user:
+    display_name: Foosball
+    always_online: true
+oauth_config:
+  scopes:
+    bot:
+      - app_mentions:read
+      - chat:write
+settings:
+  interactivity:
+    is_enabled: true
+    # Replace with the SlackRequestUrl stack output after deploy. The same URL, including ?key=, goes in Event Subscriptions.
+    request_url: https://example.com/slack
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false

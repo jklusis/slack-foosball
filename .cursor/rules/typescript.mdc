@@ -1,0 +1,30 @@
+---
+description: TypeScript shape for domain and handler code
+globs: "**/*.ts"
+alwaysApply: false
+---
+
+# TypeScript
+
+Strict TypeScript. No `any`, and no non-null assertion to paper over a missing check.
+
+Expected user outcomes are values. Throw only for broken invariants and failed I/O.
+
+```typescript
+// Bad: control flow via throw, optional fields that can contradict each other
+function start(game: { phase: string; players?: Player[] }): void {
+  if (game.players?.length !== 4) throw new Error("nope");
+}
+
+// Good: a result, using the shared reason constants
+type StartResult =
+  | { ok: true; game: ActiveGame }
+  | { ok: false; reason: RejectReason };
+
+function start(game: OpenGame, userId: string): StartResult {
+  if (game.players.length !== 4) return { ok: false, reason: Reason.needFour };
+  // ...
+}
+```
+
+Extract a function when a second caller needs it. Keep Slack payloads and AWS types out of `src/domain`.

@@ -1,0 +1,14 @@
+---
+description: Foosball scope and where product behavior is defined
+alwaysApply: true
+---
+
+# Foosball
+
+`README.md` is the product spec. `AGENTS.md` is how to change the code. If a task conflicts with either, ask before widening scope.
+
+- 1v1, 2v2, and 2v2 long game. 1v1 and 2v2 have separate ladders. A 2v2 long game uses the 2v2 ladder. Leave out draws, seasons, rating edits, and CI.
+- One TypeScript package: domain, Slack edge, DynamoDB adapter, one Lambda, one CDK stack.
+- Put new behavior behind a failing test first. Domain modules do not import Slack or AWS.
+- An open game has no pairings. A completed game stores its winners and a rating snapshot: three games for a 2v2 long game, one for a 2v2 or a 1v1. Model that as a discriminated union on `phase` and `format`.
+- Do not commit API keys, bot tokens, signing secrets, or real Slack request URLs.
