@@ -12,7 +12,7 @@ npm run deploy    # or make deploy, or make update. Needs AWS credentials, SLACK
 npm run destroy   # or make destroy. Deletes the stack and both tables. Needs the same Slack env vars, because synth reads them.
 ```
 
-Node.js is pinned in `.nvmrc`. `npm run verify` must pass with no AWS account and no Slack app, and a healthy run ends with every Vitest file passed. Do not add a Docker or LocalStack dependency for unit tests.
+Node.js is pinned in `.nvmrc`. `npm run verify` must pass with no AWS account and no Slack app. Do not add a Docker or LocalStack dependency for unit tests.
 
 ## How to work
 

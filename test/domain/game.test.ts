@@ -287,12 +287,17 @@ describe("game transitions", () => {
 
   it("keeps players out until a mode is chosen and lets anyone cancel the setup", () => {
     expect(apply(setup(), { type: "join", player: ada })).toEqual({ kind: "reject", reason: Reason.wrongPhase })
+    expect(apply(setup(), { type: "leave", userId: "A" })).toEqual({ kind: "reject", reason: Reason.wrongPhase })
     expect(apply(setup(), { type: "start", userId: "A", random })).toEqual({
       kind: "reject",
       reason: Reason.wrongPhase,
     })
     const cancelled = saved(apply(setup(), { type: "cancel", player: eve }))
     expect(cancelled).toMatchObject({ phase: "cancelled", format: "pending", cancelledBy: eve })
+    expect(apply(cancelled, { type: "mode", mode: "random" })).toEqual({
+      kind: "reject",
+      reason: Reason.wrongPhase,
+    })
   })
 
   it("draws random teams at start and rates the one game on the 2v2 ladder", () => {

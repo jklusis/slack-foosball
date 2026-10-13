@@ -90,7 +90,8 @@ describe("game codec", () => {
     }
     const random: OpenGame = { ...setup, phase: "open", format: "random", players: [players[3]] }
     const cancelledSetup: CancelledGame = { ...cancelled, format: "pending", players: [] }
-    for (const game of [setup, random, cancelledSetup, open, match, active, reporting, completedResult.game, cancelled]) {
+    const cancelledRandom: CancelledGame = { ...cancelled, format: "random" }
+    for (const game of [setup, random, cancelledSetup, cancelledRandom, open, match, active, reporting, completedResult.game, cancelled]) {
       expect(gameFromItem(gameToItem({ version: 4, game }))).toEqual({ version: 4, game })
     }
   })

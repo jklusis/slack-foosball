@@ -204,9 +204,9 @@ Action ids, stable for tests:
 
 | action_id | value |
 | --- | --- |
-| `game_mode_random`, `game_mode_teams`, `game_mode_long` | `gameId` |
+| `game_mode_random`, `game_mode_teams`, `game_mode_long` (stored as `random`, `match`, `doubles`) | `gameId` |
 | `game_join`, `game_join_a`, `game_join_b`, `game_leave`, `game_cancel`, `game_start`, `game_finish`, `game_save` | `gameId` |
-| `game_pick_home`, `game_pick_away` | `gameId`, round index (`0` for a single game, `0..2` for a 2v2 long game), `home` or `away` |
+| `game_pick_home`, `game_pick_away`, and `game_pick` on older messages | `gameId`, round index (`0` for a single game, `0..2` for a 2v2 long game), `home` or `away` |
 
 ## Deploy
 

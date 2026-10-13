@@ -38,6 +38,16 @@ describe("handle", () => {
     expect(stored?.game).toMatchObject({ phase: "setup", format: "pending", players: [], createdBy: "U1" })
   })
 
+  it("lets anyone cancel a 2v2 during setup", async () => {
+    const { deps, repo, updates, notes } = harness()
+    await handle(event(mention("2v2")), deps)
+    await handle(event(payload({ action_id: "game_cancel", value: "game-1", user: "U9", username: "zed" })), deps)
+    expect(notes).toEqual([])
+    expect(updates[0]?.text).toBe("2v2 cancelled")
+    expect(idsOf(updates[0]?.blocks)).toEqual([])
+    expect((await repo.get("T1", "game-1"))?.game).toMatchObject({ phase: "cancelled", cancelledBy: { userId: "U9" } })
+  })
+
   it("replaces the setup with the chosen mode and draws random teams at start", async () => {
     const { deps, repo, messages, updates, notes } = harness()
     deps.random = () => 0

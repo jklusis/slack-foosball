@@ -109,6 +109,39 @@ describe("handleAction", () => {
     expect(ladders.singles).toEqual([])
   })
 
+  it("rejects a mode click that loses the race to another mode", async () => {
+    const repo = new MemoryRepository()
+    await repo.create({
+      id: "game-1",
+      teamId: "T1",
+      channelId: "C1",
+      createdBy: "Z",
+      phase: "setup",
+      format: "pending",
+      players: [],
+    })
+    const racing: GameRepository = Object.create(repo)
+    let raced = false
+    racing.compareAndSwap = async (version, game) => {
+      if (!raced) {
+        raced = true
+        // Another click chose the long game between this click's read and its write.
+        const stored = await repo.get("T1", "game-1")
+        if (stored?.game.phase !== "setup") throw new Error("expected setup")
+        await repo.compareAndSwap(version, { ...stored.game, phase: "open", format: "doubles", players: [] })
+      }
+      return repo.compareAndSwap(version, game)
+    }
+    const outcome = await handleAction(racing, {
+      teamId: "T1",
+      gameId: "game-1",
+      actor: eve,
+      action: { type: "mode", mode: "random" },
+    })
+    expect(outcome).toEqual({ type: "ephemeral", reason: Reason.wrongPhase })
+    expect((await repo.get("T1", "game-1"))?.game).toMatchObject({ phase: "open", format: "doubles" })
+  })
+
   it("applies ratings once when results are saved twice", async () => {
     const repo = new MemoryRepository()
     const players = requireFour([ada, ben, cia, dan])

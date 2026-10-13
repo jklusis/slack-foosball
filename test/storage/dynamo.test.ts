@@ -1,12 +1,31 @@
 import { describe, expect, it } from "vitest"
 import { apply } from "../../src/domain/game"
 import { pairings } from "../../src/domain/pairings"
-import type { OpenGame, ReportingGame } from "../../src/domain/types"
+import type { OpenGame, ReportingGame, SetupGame } from "../../src/domain/types"
 import { requireFour } from "../../src/domain/types"
 import { DynamoRepository, type DocumentSender } from "../../src/storage/dynamo"
 import { player } from "../helpers"
 
 describe("DynamoRepository", () => {
+  it("stores a 2v2 setup and replaces it with the chosen mode", async () => {
+    const repo = new DynamoRepository("Games", "Players", new FakeDocuments())
+    const setup: SetupGame = {
+      id: "game-1",
+      teamId: "T1",
+      channelId: "C1",
+      createdBy: "Z",
+      phase: "setup",
+      format: "pending",
+      players: [],
+    }
+    await repo.create(setup)
+    expect(await repo.get("T1", "game-1")).toEqual({ version: 1, game: setup })
+    const chosen = apply(setup, { type: "mode", mode: "random" })
+    if (chosen.kind !== "save") throw new Error("expected save")
+    expect(await repo.compareAndSwap(1, chosen.game)).toBe("ok")
+    expect((await repo.get("T1", "game-1"))?.game).toMatchObject({ phase: "open", format: "random", players: [] })
+  })
+
   it("keeps a conditional roster write and a second rating update from landing", async () => {
     const repo = new DynamoRepository("Games", "Players", new FakeDocuments())
     const open: OpenGame = {

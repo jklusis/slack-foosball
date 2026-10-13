@@ -5,8 +5,8 @@ export function matchRound(home: TwoPlayers, away: TwoPlayers): [RoundOf<"match"
   return [{ home, away, winner: null }]
 }
 
-// Fisher-Yates over all four players, so each of the three team splits is equally likely.
-// `random` returns a number in [0, 1), like Math.random.
+// Fisher-Yates over all four players: each of the three team splits is equally likely, and so is
+// which team takes the home side. `random` returns a number in [0, 1), like Math.random.
 export function randomTeams(players: FourPlayers, random: () => number): [RoundOf<"match">] {
   const order: Player[] = [...players]
   for (let index = order.length - 1; index > 0; index -= 1) {
