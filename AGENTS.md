@@ -1,33 +1,24 @@
 # Agent guide
 
-`README.md` is the product and architecture spec. Follow it. If a change would add draws, another Slack Web API method, a second service, or CI, stop and ask.
+`README.md` is the product and architecture spec. This file is how to change the code. Both apply to every coding agent: `CLAUDE.md` imports this file and Cursor reads it directly, so agent guidance lives here and nowhere else. If a change would add draws, another Slack Web API method, a second service, or CI, stop and ask.
 
 ## Commands
 
-Once `package.json` exists:
-
 ```bash
-npm test          # required before considering work done
+npm run verify    # typecheck, then tests. Run it before calling work done.
+npm test
 npm run typecheck
 npm run deploy    # or make deploy, or make update. Needs AWS credentials, SLACK_SIGNING_SECRET, and SLACK_BOT_TOKEN. Bootstraps, then reconciles the stack.
 npm run destroy   # or make destroy. Deletes the stack and both tables. Needs the same Slack env vars, because synth reads them.
 ```
 
-`npm test` must pass with no AWS account and no Slack app. Do not add a Docker or LocalStack dependency for unit tests.
+Node.js is pinned in `.nvmrc`. `npm run verify` must pass with no AWS account and no Slack app, and a healthy run ends with every Vitest file passed. Do not add a Docker or LocalStack dependency for unit tests.
 
-## How to build
+## How to work
 
-Work in vertical slices. For each slice, write the failing test first, then the code.
-
-1. `src/domain/elo.ts` — the even-game case in the README (1000 → 1016 / 984) and a favorite who gains fewer points.
-2. `src/domain/pairings.ts` — join order becomes the three 2v2 games, each person partners with each other person once, or the single 1v1.
-3. `src/domain/game.ts` — phase transitions, including rejected actions.
-4. `src/slack/render.ts` — blocks for each phase. Assert action ids and who is listed, not a full JSON snapshot.
-5. `src/storage` — in-memory repository with conditional writes. Fifth player, double join, and double save are the cases that matter.
-6. `src/handler.ts` — fixture payloads in, repository state and reply kind out.
-7. DynamoDB adapter and the CDK stack, then `slack/manifest.yml` if the request URL contract changes.
-
-Keep the domain free of Slack payloads and AWS types. Translate at `src/slack/parse.ts` and `src/storage/dynamo.ts`.
+- Work in vertical slices. For each slice, write the failing test first, then the code. When a change crosses layers, go domain, render, storage, handler.
+- Keep the domain free of Slack payloads and AWS types. Translate at `src/slack/parse.ts` and `src/storage/codec.ts`.
+- Before opening a PR, have an agent in a fresh context review the diff against this file and the README. The author's own context hides its mistakes.
 
 ## Invariants
 
@@ -38,26 +29,27 @@ Keep the domain free of Slack payloads and AWS types. Translate at `src/slack/pa
 - After start, only those players can finish, cancel, pick, or save. Anyone can cancel while the game is open.
 - An inapplicable click sends an ephemeral reply and does not change the message.
 - Games and players are keyed by Slack `team_id`.
-- Verify the API key and the Slack signature on the raw body before parsing. Mention replies go out with `chat.postMessage`. Button updates use `chat.update` on that message. A private note uses `chat.postEphemeral`. The HTTP response to a mention or a button click is 200, not the new message.
+- Verify the API key and the Slack signature on the raw body before parsing. Compare secrets in constant time. Mention replies go out with `chat.postMessage`. Button updates use `chat.update` on that message, and `response_url` is only the fallback because it expires after 30 minutes. A private note uses `chat.postEphemeral`. The HTTP response to a mention or a button click is 200, not the new message.
+- Roster and phase writes are conditional. A failed condition becomes an ephemeral reply or an idempotent re-render, never a second rating update.
 
 ## Code shape
 
 - One module, one reason to change. Add a helper when a second caller needs it.
-- Model `Game` as a discriminated union on `phase` so an open game cannot carry results and a completed game cannot omit them.
+- Model `Game` as a discriminated union on `phase` and `format` so an open game cannot carry results and a completed game cannot omit them.
 - Expected user outcomes (`not-a-player`, `game-full`) are return values. Throw only when the process cannot continue (bad config, failed I/O, a broken invariant).
+- Strict TypeScript. No `any`, and no non-null assertion to paper over a missing check.
 - Parse and validate at the handler boundary. The rest of the code accepts domain types.
-- Name constants for the starting rating and K in the elo module.
 - Prefer a short pure function over a class that only holds functions.
 - Comments explain a non-obvious constraint (Slack's 3 second ack, raw-body signature). Do not comment the mechanics the code already shows.
 
 ## Tests
 
-Test behavior a player would notice or a bug that would corrupt a rating or a roster.
+Use Vitest, with no AWS account and no network. Test behavior a player would notice or a bug that would corrupt a rating or a roster.
 
 - Cover the transition table: join, leave, start too early, start at four, non-player after start, cancel, pick, save, save again.
 - Cover concurrent-style conditions on the repository: two joins of the same user, a fifth player, a third player on a 1v1, two saves, and a singles save that leaves the doubles rating in place.
 - Handler tests use a fake repository and a fake Slack reply. Assert whether the reply replaces the message or is ephemeral.
-- Skip tests that only check a mock was called, and skip snapshot files of Block Kit JSON.
+- Assert action ids and who is listed, not a full Block Kit JSON snapshot. Skip tests that only check a mock was called.
 
 ## AWS and Slack
 
@@ -70,4 +62,4 @@ Test behavior a player would notice or a bug that would corrupt a rating or a ro
 
 ## Done
 
-A change is done when `npm test` passes, the new behavior is covered by a test that would fail if the behavior were removed, and `README.md` still matches the code. Update the README when a product rule changes.
+A change is done when `npm run verify` passes, the new behavior is covered by a test that would fail if the behavior were removed, and `README.md` still matches the code. Update the README when a product rule changes, and this file when a fact in it changes.

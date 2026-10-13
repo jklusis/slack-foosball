@@ -5,7 +5,7 @@ deploy update:
 	@test -n "$$SLACK_SIGNING_SECRET" || { echo "Set SLACK_SIGNING_SECRET. Copy it from the Slack app Basic Information page."; exit 1; }
 	@test -n "$$SLACK_BOT_TOKEN" || { echo "Set SLACK_BOT_TOKEN. Copy the Bot User OAuth Token from OAuth & Permissions."; exit 1; }
 	npm install
-	npm test
+	npm run verify
 	npm run deploy
 
 destroy:
