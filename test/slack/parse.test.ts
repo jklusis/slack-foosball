@@ -12,7 +12,7 @@ describe("parseSlackBody", () => {
     })
     expect(parseSlackBody(mention("<@UBOT|Foosball> 2v2", true))).toMatchObject({
       kind: "open",
-      format: "pending",
+      format: "2v2",
     })
     expect(parseSlackBody(mention("2v2x3"))).toEqual({ kind: "unknown", channelId: "C1" })
     expect(parseSlackBody(mention("top"))).toMatchObject({ kind: "top", teamId: "T1", channelId: "C1" })
@@ -28,13 +28,13 @@ describe("parseSlackBody", () => {
 
   it("reads a 2v2 mode button", () => {
     for (const mode of ["random", "teams", "long"] as const) {
-      expect(parseSlackBody(click(`game_mode_${mode}`, "game-1"))).toMatchObject({
+      expect(parseSlackBody(click(`game_2v2_${mode}`, "game-1"))).toMatchObject({
         kind: "action",
         gameId: "game-1",
-        action: { type: "mode", mode },
+        action: { type: "choose2v2", mode },
       })
     }
-    expect(parseSlackBody(click("game_mode_other", "game-1"))).toMatchObject({ kind: "invalid-action" })
+    expect(parseSlackBody(click("game_2v2_other", "game-1"))).toMatchObject({ kind: "invalid-action" })
   })
 
   it("reads a pick button", () => {

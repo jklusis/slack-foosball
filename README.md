@@ -43,7 +43,7 @@ stateDiagram-v2
 
 `@Foosball 2v2` first posts a setup message with one button per mode and Cancel. Anyone who can see it may choose. The choice replaces the setup with that mode's open game, and the mode cannot change after that. To play another mode, cancel the game and open a new one.
 
-| Mode | Button | Roster | Games |
+| Mode2v2 | Button | Roster | Games |
 | --- | --- | --- | --- |
 | Random teams | Single 2v2 game, random assignments | Four players join, 0/4 | One. Teams are drawn at random when the game starts. |
 | Chosen teams | Single 2v2 game, manual team join | Players join Team A or Team B, 0/2 each | One, Team A against Team B |
@@ -181,7 +181,7 @@ Two on-demand DynamoDB tables. Deploying again keeps the games and ratings. `mak
 
 **Players.** Partition key `teamId`, sort key `userId`. Holds `displayName` plus a doubles rating and a singles rating. Saving a game updates only that format, so one result cannot wipe the other ladder. A player item that only has the older top-level `elo`, `wins`, and `losses` is read as a doubles rating. The ladders are a query by workspace.
 
-Game phases are a discriminated union on `phase` and `format`. `format` is `singles` for a 1v1, `match` for a single 2v2, and `doubles` for a 2v2 long game. A 2v2 in setup has format `pending` and no players. An open random-teams 2v2 has format `random`, and Start stores the drawn teams as a `match`. An open game has no pairings. An active 2v2 long game has four players and three unpicked games. An active single 2v2 has four players and one unpicked game. An active 1v1 has two players and one unpicked game. A completed game has its winners and a rating snapshot for that format. A cancelled game records who cancelled it. A stored game with no format is read as a 2v2 long game.
+Game phases are a discriminated union on `phase` and `format`. `format` is `singles` for a 1v1, `match` for a single 2v2, and `doubles` for a 2v2 long game. A 2v2 in setup has format `2v2` and no players. An open random-teams 2v2 has format `random`, and Start stores the drawn teams as a `match`. An open game has no pairings. An active 2v2 long game has four players and three unpicked games. An active single 2v2 has four players and one unpicked game. An active 1v1 has two players and one unpicked game. A completed game has its winners and a rating snapshot for that format. A cancelled game records who cancelled it. A stored game with no format is read as a 2v2 long game.
 
 ## Repository
 
@@ -204,7 +204,7 @@ Action ids, stable for tests:
 
 | action_id | value |
 | --- | --- |
-| `game_mode_random`, `game_mode_teams`, `game_mode_long` (stored as `random`, `match`, `doubles`) | `gameId` |
+| `game_2v2_random`, `game_2v2_teams`, `game_2v2_long` (stored as `random`, `match`, `doubles`) | `gameId` |
 | `game_join`, `game_join_a`, `game_join_b`, `game_leave`, `game_cancel`, `game_start`, `game_finish`, `game_save` | `gameId` |
 | `game_pick_home`, `game_pick_away`, and `game_pick` on older messages | `gameId`, round index (`0` for a single game, `0..2` for a 2v2 long game), `home` or `away` |
 

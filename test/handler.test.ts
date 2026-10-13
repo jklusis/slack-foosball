@@ -29,13 +29,13 @@ describe("handle", () => {
     expect(messages[0]?.channelId).toBe("C1")
     expect(messages[0]?.text).toBe("New 2v2")
     expect(idsOf(messages[0]?.blocks)).toEqual([
-      "game_mode_random",
-      "game_mode_teams",
-      "game_mode_long",
+      "game_2v2_random",
+      "game_2v2_teams",
+      "game_2v2_long",
       "game_cancel",
     ])
     const stored = await repo.get("T1", "game-1")
-    expect(stored?.game).toMatchObject({ phase: "setup", format: "pending", players: [], createdBy: "U1" })
+    expect(stored?.game).toMatchObject({ phase: "setup", format: "2v2", players: [], createdBy: "U1" })
   })
 
   it("lets anyone cancel a 2v2 during setup", async () => {
@@ -53,12 +53,12 @@ describe("handle", () => {
     deps.random = () => 0
     await handle(event(mention("2v2")), deps)
 
-    await handle(event(payload({ action_id: "game_mode_random", value: "game-1", user: "U9", username: "zed" })), deps)
+    await handle(event(payload({ action_id: "game_2v2_random", value: "game-1", user: "U9", username: "zed" })), deps)
     expect(updates.at(-1)?.messageTs).toBe("111.222")
     expect(idsOf(updates.at(-1)?.blocks)).toEqual(["game_join", "game_leave", "game_cancel"])
     expect(updates.at(-1)?.text).toBe("New 2v2 game (0/4)")
 
-    await handle(event(payload({ action_id: "game_mode_long", value: "game-1", user: "U9", username: "zed" })), deps)
+    await handle(event(payload({ action_id: "game_2v2_long", value: "game-1", user: "U9", username: "zed" })), deps)
     expect(notes).toEqual([{ channelId: "C1", userId: "U9", text: copy.wrongPhase }])
     expect(updates).toHaveLength(1)
     expect((await repo.get("T1", "game-1"))?.game.format).toBe("random")

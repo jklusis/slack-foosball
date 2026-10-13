@@ -1,15 +1,16 @@
 import { assertNever } from "../assert-never"
 import { rateSession } from "./elo"
 import { matchRound, pairings, randomTeams, singlesMatch } from "./pairings"
-import { Reason, requireFour, requireTwo } from "./types"
+import { Reason, baseOf, requireFour, requireTwo, rosterSize } from "./types"
 import type {
   ActiveGame,
   CancelledGame,
   CompletedGame,
   DecidedRound,
   DecidedRoundOf,
+  GameBase,
   GameFormat,
-  Mode,
+  Mode2v2,
   RoundOf,
   Game,
   OpenGame,
@@ -19,7 +20,7 @@ import type {
   RejectReason,
   ReportingGame,
   Round,
-  SetupGame,
+  Setup2v2Game,
   Side,
   Team,
   ThreeDecided,
@@ -27,7 +28,7 @@ import type {
 } from "./types"
 
 export type GameCommand =
-  | { type: "mode"; mode: Mode }
+  | { type: "choose2v2"; mode: Mode2v2 }
   | { type: "join"; player: Player; team?: Team }
   | { type: "leave"; userId: string }
   | { type: "cancel"; player: Player }
@@ -44,8 +45,8 @@ export type ApplyResult =
 
 export function apply(game: Game, command: GameCommand): ApplyResult {
   switch (command.type) {
-    case "mode":
-      return chooseMode(game, command.mode)
+    case "choose2v2":
+      return choose2v2Mode(game, command.mode)
     case "join":
       return join(game, command.player, command.team)
     case "leave":
@@ -65,36 +66,23 @@ export function apply(game: Game, command: GameCommand): ApplyResult {
   }
 }
 
-function capacity(format: "singles" | "doubles" | "random"): number {
-  return format === "singles" ? 2 : 4
-}
+// The open format each 2v2 mode becomes.
+const openFormat2v2 = { random: "random", teams: "match", long: "doubles" } as const satisfies Record<
+  Mode2v2,
+  OpenGame["format"]
+>
 
-function chooseMode(game: Game, mode: Mode): ApplyResult {
-  if (game.phase === "setup") return saveGame(openFor(game, mode))
+function choose2v2Mode(game: Game, mode: Mode2v2): ApplyResult {
+  const format = openFormat2v2[mode]
+  if (game.phase === "setup") return saveGame(open2v2(game, format))
   // A second click on the same mode re-renders. Switching modes after the choice is not offered.
-  if (game.phase === "open" && modeOf(game) === mode) return keep(game)
+  if (game.phase === "open" && game.format === format) return keep(game)
   return reject(Reason.wrongPhase)
 }
 
-function openFor(game: SetupGame, mode: Mode): OpenGame {
-  const base = { id: game.id, teamId: game.teamId, channelId: game.channelId, createdBy: game.createdBy }
-  switch (mode) {
-    case "random":
-      return { ...base, phase: "open", format: "random", players: [] }
-    case "teams":
-      return { ...base, phase: "open", format: "match", players: [], teamA: [], teamB: [] }
-    case "long":
-      return { ...base, phase: "open", format: "doubles", players: [] }
-    default:
-      return assertNever(mode)
-  }
-}
-
-function modeOf(game: OpenGame): Mode | undefined {
-  if (game.format === "random") return "random"
-  if (game.format === "match") return "teams"
-  if (game.format === "doubles") return "long"
-  return undefined
+function open2v2(game: Setup2v2Game, format: (typeof openFormat2v2)[Mode2v2]): OpenGame {
+  if (format === "match") return { ...baseOf(game), phase: "open", format, players: [], teamA: [], teamB: [] }
+  return { ...baseOf(game), phase: "open", format, players: [] }
 }
 
 function join(game: Game, player: Player, team?: Team): ApplyResult {
@@ -108,7 +96,7 @@ function join(game: Game, player: Player, team?: Team): ApplyResult {
       players: game.players.map((item) => (item.userId === player.userId ? player : item)),
     })
   }
-  if (game.players.length >= capacity(game.format)) return reject(Reason.gameFull)
+  if (game.players.length >= rosterSize(game.format)) return reject(Reason.gameFull)
   return saveGame({ ...game, players: [...game.players, player] })
 }
 
@@ -177,17 +165,14 @@ function start(game: Game, userId: string, random: () => number): ApplyResult {
   if (game.phase !== "open") return reject(Reason.wrongPhase)
   if (game.format === "match") return startMatch(game, userId)
   if (game.format === "random") return startRandom(game, userId, random)
-  if (game.players.length !== capacity(game.format)) {
+  if (game.players.length !== rosterSize(game.format)) {
     return reject(game.format === "singles" ? Reason.needTwo : Reason.needFour)
   }
   if (!hasPlayer(game.players, userId)) return reject(Reason.notAPlayer)
   if (game.format === "singles") {
     const players = requireTwo(game.players)
     const active: ActiveGame = {
-      id: game.id,
-      teamId: game.teamId,
-      channelId: game.channelId,
-      createdBy: game.createdBy,
+      ...baseOf(game),
       phase: "active",
       format: "singles",
       players,
@@ -197,10 +182,7 @@ function start(game: Game, userId: string, random: () => number): ApplyResult {
   }
   const players = requireFour(game.players)
   const active: ActiveGame = {
-    id: game.id,
-    teamId: game.teamId,
-    channelId: game.channelId,
-    createdBy: game.createdBy,
+    ...baseOf(game),
     phase: "active",
     format: "doubles",
     players,
@@ -215,10 +197,7 @@ function startMatch(game: Extract<OpenGame, { format: "match" }>, userId: string
   const home = requireTwo(game.teamA)
   const away = requireTwo(game.teamB)
   const active: ActiveGame = {
-    id: game.id,
-    teamId: game.teamId,
-    channelId: game.channelId,
-    createdBy: game.createdBy,
+    ...baseOf(game),
     phase: "active",
     format: "match",
     players: requireFour([...home, ...away]),
@@ -232,14 +211,11 @@ function startRandom(
   userId: string,
   random: () => number,
 ): ApplyResult {
-  if (game.players.length !== capacity(game.format)) return reject(Reason.needFour)
+  if (game.players.length !== rosterSize(game.format)) return reject(Reason.needFour)
   if (!hasPlayer(game.players, userId)) return reject(Reason.notAPlayer)
   const rounds = randomTeams(requireFour(game.players), random)
   const active: ActiveGame = {
-    id: game.id,
-    teamId: game.teamId,
-    channelId: game.channelId,
-    createdBy: game.createdBy,
+    ...baseOf(game),
     phase: "active",
     format: "match",
     players: requireFour([...rounds[0].home, ...rounds[0].away]),
@@ -308,10 +284,7 @@ function saveSingles(
   if (!round) return reject(Reason.resultsIncomplete)
   const rated = rateSession(game.players, [round], ratings)
   const completed: CompletedGame = {
-    id: game.id,
-    teamId: game.teamId,
-    channelId: game.channelId,
-    createdBy: game.createdBy,
+    ...baseOf(game),
     phase: "completed",
     format: "singles",
     players: game.players,
@@ -329,10 +302,7 @@ function saveMatchResult(
   if (!round) return reject(Reason.resultsIncomplete)
   const rated = rateSession(game.players, [round], ratings)
   const completed: CompletedGame = {
-    id: game.id,
-    teamId: game.teamId,
-    channelId: game.channelId,
-    createdBy: game.createdBy,
+    ...baseOf(game),
     phase: "completed",
     format: "match",
     players: game.players,
@@ -350,10 +320,7 @@ function saveDoubles(
   if (!rounds) return reject(Reason.resultsIncomplete)
   const rated = rateSession(game.players, rounds, ratings)
   const completed: CompletedGame = {
-    id: game.id,
-    teamId: game.teamId,
-    channelId: game.channelId,
-    createdBy: game.createdBy,
+    ...baseOf(game),
     phase: "completed",
     format: "doubles",
     players: game.players,
@@ -393,22 +360,9 @@ function asThree(rounds: Round[]): ThreeRounds {
   return [first, second, third]
 }
 
-function cancelled(
-  game: {
-    id: string
-    teamId: string
-    channelId: string
-    createdBy: string
-    format: GameFormat
-    players: Player[]
-  },
-  player: Player,
-): CancelledGame {
+function cancelled(game: GameBase & { format: GameFormat; players: Player[] }, player: Player): CancelledGame {
   return {
-    id: game.id,
-    teamId: game.teamId,
-    channelId: game.channelId,
-    createdBy: game.createdBy,
+    ...baseOf(game),
     phase: "cancelled",
     format: game.format,
     players: game.players,

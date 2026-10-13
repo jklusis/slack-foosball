@@ -7,7 +7,7 @@ import type {
   CompletedGame,
   OpenGame,
   ReportingGame,
-  SetupGame,
+  Setup2v2Game,
   ThreeDecided,
   ThreeRounds,
 } from "../../src/domain/types"
@@ -79,17 +79,17 @@ describe("game codec", () => {
       teamA: [players[0]],
       teamB: [players[2]],
     }
-    const setup: SetupGame = {
+    const setup: Setup2v2Game = {
       id: "game-1",
       teamId: "T1",
       channelId: "C1",
       createdBy: "Z",
       phase: "setup",
-      format: "pending",
+      format: "2v2",
       players: [],
     }
     const random: OpenGame = { ...setup, phase: "open", format: "random", players: [players[3]] }
-    const cancelledSetup: CancelledGame = { ...cancelled, format: "pending", players: [] }
+    const cancelledSetup: CancelledGame = { ...cancelled, format: "2v2", players: [] }
     const cancelledRandom: CancelledGame = { ...cancelled, format: "random" }
     for (const game of [setup, random, cancelledSetup, cancelledRandom, open, match, active, reporting, completedResult.game, cancelled]) {
       expect(gameFromItem(gameToItem({ version: 4, game }))).toEqual({ version: 4, game })
@@ -124,7 +124,7 @@ describe("game codec", () => {
   it("rejects a stored game whose format cannot be in its phase", () => {
     const setup = { teamId: "T1", gameId: "game-1", version: 1, channelId: "C1", createdBy: "Z", players: [] }
     expect(() => gameFromItem({ ...setup, phase: "setup", format: "doubles" })).toThrow(/format/)
-    expect(() => gameFromItem({ ...setup, phase: "open", format: "pending" })).toThrow(/format/)
+    expect(() => gameFromItem({ ...setup, phase: "open", format: "2v2" })).toThrow(/format/)
     expect(() => gameFromItem({ ...setup, phase: "active", format: "random", rounds: [] })).toThrow(/format/)
   })
 

@@ -46,13 +46,13 @@ describe("renderGame", () => {
       channelId: "C1",
       createdBy: "Z",
       phase: "setup",
-      format: "pending",
+      format: "2v2",
       players: [],
     })
     expect(actionIds(view.blocks)).toEqual([
-      "game_mode_random",
-      "game_mode_teams",
-      "game_mode_long",
+      "game_2v2_random",
+      "game_2v2_teams",
+      "game_2v2_long",
       "game_cancel",
     ])
     expect(buttonLabels(view.blocks)).toEqual([
@@ -69,7 +69,7 @@ describe("renderGame", () => {
       channelId: "C1",
       createdBy: "Z",
       phase: "cancelled",
-      format: "pending",
+      format: "2v2",
       players: [],
       cancelledBy: player("E", "Eve"),
     })

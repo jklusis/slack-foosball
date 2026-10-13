@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import { apply } from "../../src/domain/game"
 import { Reason } from "../../src/domain/types"
 import { pairings } from "../../src/domain/pairings"
-import type { ActiveGame, FourPlayers, Game, OpenGame, ReportingGame, SetupGame } from "../../src/domain/types"
+import type { ActiveGame, FourPlayers, Game, OpenGame, ReportingGame, Setup2v2Game } from "../../src/domain/types"
 import { requireFour } from "../../src/domain/types"
 import { player } from "../helpers"
 
@@ -257,29 +257,29 @@ describe("game transitions", () => {
   })
 
   it("turns a 2v2 setup into the chosen mode, once", () => {
-    const random2v2 = saved(apply(setup(), { type: "mode", mode: "random" }))
+    const random2v2 = saved(apply(setup(), { type: "choose2v2", mode: "random" }))
     expect(random2v2).toMatchObject({ phase: "open", format: "random", players: [] })
-    expect(apply(random2v2, { type: "mode", mode: "random" })).toEqual({ kind: "keep", game: random2v2 })
-    expect(apply(random2v2, { type: "mode", mode: "long" })).toEqual({
+    expect(apply(random2v2, { type: "choose2v2", mode: "random" })).toEqual({ kind: "keep", game: random2v2 })
+    expect(apply(random2v2, { type: "choose2v2", mode: "long" })).toEqual({
       kind: "reject",
       reason: Reason.wrongPhase,
     })
 
-    expect(saved(apply(setup(), { type: "mode", mode: "teams" }))).toMatchObject({
+    expect(saved(apply(setup(), { type: "choose2v2", mode: "teams" }))).toMatchObject({
       phase: "open",
       format: "match",
       players: [],
       teamA: [],
       teamB: [],
     })
-    const long = saved(apply(setup(), { type: "mode", mode: "long" }))
+    const long = saved(apply(setup(), { type: "choose2v2", mode: "long" }))
     expect(long).toMatchObject({ phase: "open", format: "doubles", players: [] })
-    expect(apply(long, { type: "mode", mode: "long" })).toEqual({ kind: "keep", game: long })
-    expect(apply(open(roster), { type: "mode", mode: "teams" })).toEqual({
+    expect(apply(long, { type: "choose2v2", mode: "long" })).toEqual({ kind: "keep", game: long })
+    expect(apply(open(roster), { type: "choose2v2", mode: "teams" })).toEqual({
       kind: "reject",
       reason: Reason.wrongPhase,
     })
-    expect(apply(active(), { type: "mode", mode: "long" })).toEqual({
+    expect(apply(active(), { type: "choose2v2", mode: "long" })).toEqual({
       kind: "reject",
       reason: Reason.wrongPhase,
     })
@@ -293,15 +293,15 @@ describe("game transitions", () => {
       reason: Reason.wrongPhase,
     })
     const cancelled = saved(apply(setup(), { type: "cancel", player: eve }))
-    expect(cancelled).toMatchObject({ phase: "cancelled", format: "pending", cancelledBy: eve })
-    expect(apply(cancelled, { type: "mode", mode: "random" })).toEqual({
+    expect(cancelled).toMatchObject({ phase: "cancelled", format: "2v2", cancelledBy: eve })
+    expect(apply(cancelled, { type: "choose2v2", mode: "random" })).toEqual({
       kind: "reject",
       reason: Reason.wrongPhase,
     })
   })
 
   it("draws random teams at start and rates the one game on the 2v2 ladder", () => {
-    const lobby = saved(apply(setup(), { type: "mode", mode: "random" }))
+    const lobby = saved(apply(setup(), { type: "choose2v2", mode: "random" }))
     expect(apply(lobby, { type: "start", userId: "A", random })).toEqual({
       kind: "reject",
       reason: Reason.needFour,
@@ -336,14 +336,14 @@ describe("game transitions", () => {
   })
 })
 
-function setup(): SetupGame {
+function setup(): Setup2v2Game {
   return {
     id: "game-1",
     teamId: "T1",
     channelId: "C1",
     createdBy: "Z",
     phase: "setup",
-    format: "pending",
+    format: "2v2",
     players: [],
   }
 }

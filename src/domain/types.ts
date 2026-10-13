@@ -6,10 +6,10 @@ export type Player = {
 export type Side = "home" | "away"
 export type Team = "A" | "B"
 export type Format = "doubles" | "singles" | "match"
-// A random-teams 2v2 is "random" until it starts, then a "match". A 2v2 is "pending" until a mode is chosen.
-export type GameFormat = Format | "random" | "pending"
+// A 2v2 has format "2v2" until a mode is chosen. A random-teams 2v2 is "random" until it starts, then a "match".
+export type GameFormat = Format | "random" | "2v2"
 export type LadderFormat = "doubles" | "singles"
-export type Mode = "random" | "teams" | "long"
+export type Mode2v2 = "random" | "teams" | "long"
 
 export function ladderFormat(format: GameFormat): LadderFormat {
   return format === "singles" ? "singles" : "doubles"
@@ -87,14 +87,22 @@ export type Ladder = {
   singles: PlayerStanding[]
 }
 
-type GameBase = {
+export type GameBase = {
   id: string
   teamId: string
   channelId: string
   createdBy: string
 }
 
-export type SetupGame = GameBase & { phase: "setup"; format: "pending"; players: [] }
+export function baseOf(game: GameBase): GameBase {
+  return { id: game.id, teamId: game.teamId, channelId: game.channelId, createdBy: game.createdBy }
+}
+
+export function rosterSize(format: "singles" | "doubles" | "random"): number {
+  return format === "singles" ? 2 : 4
+}
+
+export type Setup2v2Game = GameBase & { phase: "setup"; format: "2v2"; players: [] }
 
 export type OpenGame =
   | (GameBase & { phase: "open"; format: "singles" | "doubles"; players: Player[] })
@@ -153,9 +161,9 @@ export type CancelledGame = GameBase & {
   cancelledBy: Player
 }
 
-export type NewGame = SetupGame | OpenGame
+export type NewGame = Setup2v2Game | OpenGame
 
-export type Game = SetupGame | OpenGame | ActiveGame | ReportingGame | CompletedGame | CancelledGame
+export type Game = Setup2v2Game | OpenGame | ActiveGame | ReportingGame | CompletedGame | CancelledGame
 
 export const Reason = {
   gameFull: "game-full",
@@ -179,7 +187,7 @@ export const FlowReason = {
 export type FlowReason = (typeof FlowReason)[keyof typeof FlowReason]
 
 export type Click =
-  | { type: "mode"; mode: Mode }
+  | { type: "choose2v2"; mode: Mode2v2 }
   | { type: "join"; team?: Team }
   | { type: "leave" }
   | { type: "cancel" }

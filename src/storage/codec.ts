@@ -136,11 +136,11 @@ function gameFromPhase(
   item: Item,
 ): Game {
   if (phase === "setup") {
-    if (format !== "pending") throw new Error(`A setup game cannot have format ${format}`)
+    if (format !== "2v2") throw new Error(`A setup game cannot have format ${format}`)
     return { ...base, phase, format, players: [] }
   }
   if (phase === "open") {
-    if (format === "pending") throw new Error("An open game cannot have format pending")
+    if (format === "2v2") throw new Error("An open game cannot have format 2v2")
     if (format === "match") {
       return {
         ...base,
@@ -159,7 +159,7 @@ function gameFromPhase(
     const cancelled: CancelledGame = { ...base, phase, format, players, cancelledBy }
     return cancelled
   }
-  if (format === "random" || format === "pending") {
+  if (format === "random" || format === "2v2") {
     throw new Error(`A ${phase} game cannot have format ${format}`)
   }
   if (format === "singles") return singlesFromPhase(phase, base, players, item)
@@ -367,7 +367,7 @@ function readChange(value: unknown): RatingChange | undefined {
 
 function readFormat(value: unknown): GameFormat | undefined {
   if (value === undefined) return "doubles"
-  if (value === "doubles" || value === "singles" || value === "match" || value === "random" || value === "pending") {
+  if (value === "doubles" || value === "singles" || value === "match" || value === "random" || value === "2v2") {
     return value
   }
   return undefined

@@ -86,7 +86,7 @@ async function dispatch(parsed: ParsedSlack, deps: Deps): Promise<HttpResult> {
     const game: NewGame =
       parsed.format === "singles"
         ? { ...base, phase: "open", format: "singles", players: [] }
-        : { ...base, phase: "setup", format: "pending", players: [] }
+        : { ...base, phase: "setup", format: "2v2", players: [] }
     await deps.repo.create(game)
     return say(deps.channel, parsed.channelId, renderGame(game))
   }

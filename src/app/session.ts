@@ -36,8 +36,8 @@ async function commandFor(
 ): Promise<GameCommand> {
   const { action, actor } = input
   switch (action.type) {
-    case "mode":
-      return { type: "mode", mode: action.mode }
+    case "choose2v2":
+      return { type: "choose2v2", mode: action.mode }
     case "join":
       return { type: "join", player: actor, team: action.team }
     case "cancel":

@@ -1,4 +1,5 @@
 import { rankStandings } from "../domain/ladder"
+import { rosterSize } from "../domain/types"
 import type {
   ActiveGame,
   CancelledGame,
@@ -10,7 +11,7 @@ import type {
   Player,
   PlayerStanding,
   ReportingGame,
-  SetupGame,
+  Setup2v2Game,
   Side,
 } from "../domain/types"
 import { actionId, encodePick } from "./actions"
@@ -38,7 +39,7 @@ export type SlackView = {
 export function renderGame(game: Game): SlackView {
   switch (game.phase) {
     case "setup":
-      return renderSetup(game)
+      return renderSetup2v2(game)
     case "open":
       return renderOpen(game)
     case "active":
@@ -69,15 +70,15 @@ export function renderPong(): SlackView {
   return { text: copy.pong, blocks: [section(copy.pong)] }
 }
 
-function renderSetup(game: SetupGame): SlackView {
+function renderSetup2v2(game: Setup2v2Game): SlackView {
   return {
     text: "New 2v2",
     blocks: [
       section("*New 2v2*\nChoose how to play."),
       actions([
-        button(actionId.modeRandom, "Single 2v2 game, random assignments", game.id),
-        button(actionId.modeTeams, "Single 2v2 game, manual team join", game.id),
-        button(actionId.modeLong, "Long 2v2 game, each plays with everyone", game.id),
+        button(actionId.random2v2, "Single 2v2 game, random assignments", game.id),
+        button(actionId.teams2v2, "Single 2v2 game, manual team join", game.id),
+        button(actionId.long2v2, "Long 2v2 game, each plays with everyone", game.id),
         button(actionId.cancel, "Cancel", game.id, "danger"),
       ]),
     ],
@@ -246,10 +247,6 @@ function formatLabel(format: GameFormat): string {
   if (format === "singles") return "1v1"
   if (format === "doubles") return "2v2 long game"
   return "2v2"
-}
-
-function rosterSize(format: "singles" | "doubles" | "random"): number {
-  return format === "singles" ? 2 : 4
 }
 
 function asRoundIndex(index: number): 0 | 1 | 2 {

@@ -75,16 +75,16 @@ describe("handleAction", () => {
       channelId: "C1",
       createdBy: "Z",
       phase: "setup",
-      format: "pending",
+      format: "2v2",
       players: [],
     })
     const act = (actor: typeof ada, action: Parameters<typeof handleAction>[1]["action"]) =>
       handleAction(repo, { teamId: "T1", gameId: "game-1", actor, action }, () => 0.99)
-    expect(await act(eve, { type: "mode", mode: "random" })).toMatchObject({
+    expect(await act(eve, { type: "choose2v2", mode: "random" })).toMatchObject({
       type: "replace",
       game: { phase: "open", format: "random" },
     })
-    expect(await act(ada, { type: "mode", mode: "teams" })).toEqual({
+    expect(await act(ada, { type: "choose2v2", mode: "teams" })).toEqual({
       type: "ephemeral",
       reason: Reason.wrongPhase,
     })
@@ -117,7 +117,7 @@ describe("handleAction", () => {
       channelId: "C1",
       createdBy: "Z",
       phase: "setup",
-      format: "pending",
+      format: "2v2",
       players: [],
     })
     const racing: GameRepository = Object.create(repo)
@@ -136,7 +136,7 @@ describe("handleAction", () => {
       teamId: "T1",
       gameId: "game-1",
       actor: eve,
-      action: { type: "mode", mode: "random" },
+      action: { type: "choose2v2", mode: "random" },
     })
     expect(outcome).toEqual({ type: "ephemeral", reason: Reason.wrongPhase })
     expect((await repo.get("T1", "game-1"))?.game).toMatchObject({ phase: "open", format: "doubles" })

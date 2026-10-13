@@ -9,7 +9,7 @@ export type ParsedSlack =
   | { kind: "ping"; channelId: string }
   | {
       kind: "open"
-      format: "singles" | "pending"
+      format: "singles" | "2v2"
       teamId: string
       channelId: string
       userId: string
@@ -68,7 +68,7 @@ function parseMention(event: Record<string, unknown>, teamId: string | undefined
   if (!userId) return undefined
   return {
     kind: "open",
-    format: command === "1v1" ? "singles" : "pending",
+    format: command === "1v1" ? "singles" : "2v2",
     teamId: resolvedTeam,
     channelId,
     userId,
@@ -143,12 +143,12 @@ function clickFrom(
     }
   }
   switch (id) {
-    case actionId.modeRandom:
-      return { gameId: value, action: { type: "mode", mode: "random" } }
-    case actionId.modeTeams:
-      return { gameId: value, action: { type: "mode", mode: "teams" } }
-    case actionId.modeLong:
-      return { gameId: value, action: { type: "mode", mode: "long" } }
+    case actionId.random2v2:
+      return { gameId: value, action: { type: "choose2v2", mode: "random" } }
+    case actionId.teams2v2:
+      return { gameId: value, action: { type: "choose2v2", mode: "teams" } }
+    case actionId.long2v2:
+      return { gameId: value, action: { type: "choose2v2", mode: "long" } }
     case actionId.join:
       return { gameId: value, action: { type: "join" } }
     case actionId.joinA:

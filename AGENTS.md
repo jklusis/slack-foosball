@@ -35,14 +35,31 @@ Node.js is pinned in `.nvmrc`. `npm run verify` must pass with no AWS account an
 
 ## Code shape
 
-- One module, one reason to change. Add a helper when a second caller needs it.
+Keep it lean: clear names, the simplest design that works, and each fact in one place.
+
+- Dependencies point inward. `handler.ts` calls `app/session.ts`, which calls `domain/`. `slack/` and `storage/` translate to and from domain types. `domain/` imports nothing outside itself and does no I/O; randomness and time come in as arguments.
+- One module, one reason to change. Add a helper when a second caller needs it, in the module both callers already use (`rosterSize` lives in the domain, not in `render.ts` and again in `game.ts`).
+- Name for scope. Code that serves one format says so (`renderSetup2v2`, `Mode2v2`), so nobody reuses it for a 1v1 by mistake.
+- Before adding a branch on `format`, find the existing one and extend it. Two functions that differ only by format should be one function.
 - Model `Game` as a discriminated union on `phase` and `format` so an open game cannot carry results and a completed game cannot omit them.
 - Expected user outcomes (`not-a-player`, `game-full`) are return values. Throw only when the process cannot continue (bad config, failed I/O, a broken invariant).
 - Strict TypeScript. No `any`, and no non-null assertion to paper over a missing check.
 - Parse and validate at the handler boundary. The rest of the code accepts domain types.
-- Domain code stays pure. Randomness and time come in as arguments.
 - Prefer a short pure function over a class that only holds functions.
 - Comments explain a non-obvious constraint (Slack's 3 second ack, raw-body signature). Do not comment the mechanics the code already shows.
+
+```typescript
+// Bad: blocks in the HTTP response to a click.
+return { statusCode: 200, body: JSON.stringify({ replace_original: true, blocks }) }
+// Good: acknowledge, then update the bot's message. response_url expires after 30 minutes.
+await deps.channel.update(channelId, messageTs, view)
+return { statusCode: 200, body: "" }
+
+// Bad: a throw for something a player did.
+if (game.players.length !== 4) throw new Error("not enough players")
+// Good: a value the edge turns into an ephemeral note.
+if (game.players.length !== rosterSize(game.format)) return reject(Reason.needFour)
+```
 
 ## Tests
 
@@ -51,7 +68,7 @@ Use Vitest, with no AWS account and no network. Test behavior a player would not
 - Cover the transition table: choose a mode, join, leave, start too early, start at four, non-player after start, cancel, pick, save, save again.
 - Cover concurrent-style conditions on the repository: two joins of the same user, a fifth player, a third player on a 1v1, two saves, and a singles save that leaves the doubles rating in place.
 - Handler tests use a fake repository and a fake Slack reply. Assert whether the reply replaces the message or is ephemeral.
-- Assert action ids and who is listed, not a full Block Kit JSON snapshot. Skip tests that only check a mock was called.
+- Assert action ids and who is listed, not a full Block Kit JSON snapshot: `expect(actionIds(view.blocks)).toContain("game_start")`. Skip tests that only check a mock was called.
 
 ## AWS and Slack
 
