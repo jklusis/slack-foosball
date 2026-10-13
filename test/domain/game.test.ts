@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import { apply } from "../../src/domain/game"
 import { Reason } from "../../src/domain/types"
 import { pairings } from "../../src/domain/pairings"
-import type { ActiveGame, FourPlayers, Game, OpenGame, ReportingGame } from "../../src/domain/types"
+import type { ActiveGame, FourPlayers, Game, OpenGame, ReportingGame, Setup2v2Game } from "../../src/domain/types"
 import { requireFour } from "../../src/domain/types"
 import { player } from "../helpers"
 
@@ -12,6 +12,7 @@ const cia = player("C", "Cia")
 const dan = player("D", "Dan")
 const eve = player("E", "Eve")
 const roster = [ada, ben, cia, dan]
+const random = () => 0
 
 function open(players: typeof roster = []): OpenGame {
   return {
@@ -98,7 +99,7 @@ describe("game transitions", () => {
   })
 
   it("refuses to start before four players", () => {
-    expect(apply(open([ada]), { type: "start", userId: "A" })).toEqual({
+    expect(apply(open([ada]), { type: "start", userId: "A", random })).toEqual({
       kind: "reject",
       reason: Reason.needFour,
     })
@@ -106,15 +107,15 @@ describe("game transitions", () => {
 
   it("starts only for a joined player and locks pairings", () => {
     const full = open(roster)
-    expect(apply(full, { type: "start", userId: "E" })).toEqual({
+    expect(apply(full, { type: "start", userId: "E", random })).toEqual({
       kind: "reject",
       reason: Reason.notAPlayer,
     })
-    const started = saved(apply(full, { type: "start", userId: "A" }))
+    const started = saved(apply(full, { type: "start", userId: "A", random }))
     expect(started.phase).toBe("active")
     if (started.phase !== "active") return
     expect(started.rounds[0]?.home.map((item) => item.userId)).toEqual(["A", "B"])
-    expect(apply(started, { type: "start", userId: "A" })).toEqual({ kind: "keep", game: started })
+    expect(apply(started, { type: "start", userId: "A", random })).toEqual({ kind: "keep", game: started })
   })
 
   it("lets anyone cancel an open game and only players cancel an active one", () => {
@@ -189,7 +190,7 @@ describe("game transitions", () => {
 
   it("fills a 1v1 at two players and rates the single game", () => {
     const lobby = singles()
-    expect(apply(lobby, { type: "start", userId: "A" })).toEqual({
+    expect(apply(lobby, { type: "start", userId: "A", random })).toEqual({
       kind: "reject",
       reason: Reason.needTwo,
     })
@@ -199,7 +200,7 @@ describe("game transitions", () => {
       kind: "reject",
       reason: Reason.gameFull,
     })
-    const started = saved(apply(two, { type: "start", userId: "A" }))
+    const started = saved(apply(two, { type: "start", userId: "A", random }))
     expect(started.phase === "active" && started.format).toBe("singles")
     if (started.phase !== "active" || started.format !== "singles") return
     expect(started.rounds[0]?.home.map((item) => item.userId)).toEqual(["A"])
@@ -233,8 +234,8 @@ describe("game transitions", () => {
     expect(moved.phase === "open" && moved.format === "match" && moved.teamB.map((item) => item.userId)).toEqual(["B"])
     const withC = saved(apply(moved, { type: "join", player: cia, team: "B" }))
     const full = saved(apply(withC, { type: "join", player: dan, team: "A" }))
-    expect(apply(full, { type: "start", userId: "E" })).toEqual({ kind: "reject", reason: Reason.notAPlayer })
-    const started = saved(apply(full, { type: "start", userId: "A" }))
+    expect(apply(full, { type: "start", userId: "E", random })).toEqual({ kind: "reject", reason: Reason.notAPlayer })
+    const started = saved(apply(full, { type: "start", userId: "A", random }))
     expect(started.phase === "active" && started.format).toBe("match")
     if (started.phase !== "active" || started.format !== "match") return
     expect(started.rounds).toHaveLength(1)
@@ -242,6 +243,12 @@ describe("game transitions", () => {
     expect(started.rounds[0]?.away.map((item) => item.userId)).toEqual(["B", "C"])
 
     const reporting = saved(apply(started, { type: "finish", userId: "A" }))
+    for (const round of [1, 2] as const) {
+      expect(apply(reporting, { type: "pick", userId: "B", round, side: "home" })).toEqual({
+        kind: "reject",
+        reason: Reason.wrongPhase,
+      })
+    }
     const picked = saved(apply(reporting, { type: "pick", userId: "B", round: 0, side: "home" }))
     const result = apply(picked, { type: "save", userId: "A", ratings: new Map() })
     expect(result.kind).toBe("complete")
@@ -254,7 +261,98 @@ describe("game transitions", () => {
       ["C", 984],
     ])
   })
+
+  it("turns a 2v2 setup into the chosen mode, once", () => {
+    const random2v2 = saved(apply(setup(), { type: "choose2v2", mode: "random" }))
+    expect(random2v2).toMatchObject({ phase: "open", format: "random", players: [] })
+    expect(apply(random2v2, { type: "choose2v2", mode: "random" })).toEqual({ kind: "keep", game: random2v2 })
+    expect(apply(random2v2, { type: "choose2v2", mode: "long" })).toEqual({
+      kind: "reject",
+      reason: Reason.wrongPhase,
+    })
+
+    expect(saved(apply(setup(), { type: "choose2v2", mode: "teams" }))).toMatchObject({
+      phase: "open",
+      format: "match",
+      players: [],
+      teamA: [],
+      teamB: [],
+    })
+    const long = saved(apply(setup(), { type: "choose2v2", mode: "long" }))
+    expect(long).toMatchObject({ phase: "open", format: "doubles", players: [] })
+    expect(apply(long, { type: "choose2v2", mode: "long" })).toEqual({ kind: "keep", game: long })
+    expect(apply(open(roster), { type: "choose2v2", mode: "teams" })).toEqual({
+      kind: "reject",
+      reason: Reason.wrongPhase,
+    })
+    expect(apply(active(), { type: "choose2v2", mode: "long" })).toEqual({
+      kind: "reject",
+      reason: Reason.wrongPhase,
+    })
+  })
+
+  it("keeps players out until a mode is chosen and lets anyone cancel the setup", () => {
+    expect(apply(setup(), { type: "join", player: ada })).toEqual({ kind: "reject", reason: Reason.wrongPhase })
+    expect(apply(setup(), { type: "leave", userId: "A" })).toEqual({ kind: "reject", reason: Reason.wrongPhase })
+    expect(apply(setup(), { type: "start", userId: "A", random })).toEqual({
+      kind: "reject",
+      reason: Reason.wrongPhase,
+    })
+    const cancelled = saved(apply(setup(), { type: "cancel", player: eve }))
+    expect(cancelled).toMatchObject({ phase: "cancelled", format: "2v2", cancelledBy: eve })
+    expect(apply(cancelled, { type: "choose2v2", mode: "random" })).toEqual({
+      kind: "reject",
+      reason: Reason.wrongPhase,
+    })
+  })
+
+  it("draws random teams at start and rates the one game on the 2v2 ladder", () => {
+    const lobby = saved(apply(setup(), { type: "choose2v2", mode: "random" }))
+    expect(apply(lobby, { type: "start", userId: "A", random })).toEqual({
+      kind: "reject",
+      reason: Reason.needFour,
+    })
+    let full = lobby
+    for (const person of roster) full = saved(apply(full, { type: "join", player: person }))
+    expect(apply(full, { type: "join", player: eve })).toEqual({ kind: "reject", reason: Reason.gameFull })
+    expect(apply(full, { type: "start", userId: "E", random })).toEqual({
+      kind: "reject",
+      reason: Reason.notAPlayer,
+    })
+
+    // With every draw at 0, the shuffle turns A, B, C, D into B, C, D, A.
+    const started = saved(apply(full, { type: "start", userId: "A", random }))
+    if (started.phase !== "active" || started.format !== "match") throw new Error("expected an active 2v2")
+    expect(started.rounds).toHaveLength(1)
+    expect(started.rounds[0].home.map((item) => item.userId)).toEqual(["B", "C"])
+    expect(started.rounds[0].away.map((item) => item.userId)).toEqual(["D", "A"])
+    expect(started.players.map((item) => item.userId)).toEqual(["B", "C", "D", "A"])
+
+    const reporting = saved(apply(started, { type: "finish", userId: "D" }))
+    const picked = saved(apply(reporting, { type: "pick", userId: "D", round: 0, side: "away" }))
+    const result = apply(picked, { type: "save", userId: "A", ratings: new Map() })
+    if (result.kind !== "complete") throw new Error("expected complete")
+    expect(result.game.format).toBe("match")
+    expect(result.game.ratingChanges.map((change) => [change.userId, change.after])).toEqual([
+      ["B", 984],
+      ["C", 984],
+      ["D", 1016],
+      ["A", 1016],
+    ])
+  })
 })
+
+function setup(): Setup2v2Game {
+  return {
+    id: "game-1",
+    teamId: "T1",
+    channelId: "C1",
+    createdBy: "Z",
+    phase: "setup",
+    format: "2v2",
+    players: [],
+  }
+}
 
 function match(): OpenGame {
   return {

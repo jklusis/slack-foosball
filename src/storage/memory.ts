@@ -1,4 +1,4 @@
-import type { CompletedGame, Game, Ladder, LadderFormat, OpenGame, PlayerStanding, Rating } from "../domain/types"
+import type { CompletedGame, Game, Ladder, LadderFormat, NewGame, PlayerStanding, Rating } from "../domain/types"
 import { ladderFormat } from "../domain/types"
 import { ladderFromPlayers, standingOf, type PlayerRecord } from "./codec"
 import type { GameRepository, StoredGame } from "./repository"
@@ -9,7 +9,7 @@ export class MemoryRepository implements GameRepository {
   private readonly games = new Map<string, StoredGame>()
   private readonly players = new Map<string, StoredPlayer>()
 
-  async create(game: OpenGame): Promise<StoredGame> {
+  async create(game: NewGame): Promise<StoredGame> {
     const key = gameKey(game.teamId, game.id)
     if (this.games.has(key)) throw new Error(`Game ${game.id} already exists`)
     const stored = { version: 1, game: structuredClone(game) }

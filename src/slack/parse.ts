@@ -1,4 +1,4 @@
-import type { Click, Format, Player } from "../domain/types"
+import type { Click, NewGameKind, Player } from "../domain/types"
 import { actionId, decodePick, isPick } from "./actions"
 
 export type ParsedSlack =
@@ -9,7 +9,7 @@ export type ParsedSlack =
   | { kind: "ping"; channelId: string }
   | {
       kind: "open"
-      format: Format
+      format: NewGameKind
       teamId: string
       channelId: string
       userId: string
@@ -68,7 +68,7 @@ function parseMention(event: Record<string, unknown>, teamId: string | undefined
   if (!userId) return undefined
   return {
     kind: "open",
-    format: command === "1v1" ? "singles" : command === "2v2x3" ? "doubles" : "match",
+    format: command === "1v1" ? "singles" : "2v2",
     teamId: resolvedTeam,
     channelId,
     userId,
@@ -76,8 +76,8 @@ function parseMention(event: Record<string, unknown>, teamId: string | undefined
   }
 }
 
-function isGameCommand(command: string): command is "1v1" | "2v2" | "2v2x3" | "top" {
-  return command === "1v1" || command === "2v2" || command === "2v2x3" || command === "top"
+function isGameCommand(command: string): command is "1v1" | "2v2" | "top" {
+  return command === "1v1" || command === "2v2" || command === "top"
 }
 
 function mentionedCommand(text: string): string {
@@ -143,6 +143,12 @@ function clickFrom(
     }
   }
   switch (id) {
+    case actionId.choose2v2Random:
+      return { gameId: value, action: { type: "choose2v2", mode: "random" } }
+    case actionId.choose2v2Teams:
+      return { gameId: value, action: { type: "choose2v2", mode: "teams" } }
+    case actionId.choose2v2Long:
+      return { gameId: value, action: { type: "choose2v2", mode: "long" } }
     case actionId.join:
       return { gameId: value, action: { type: "join" } }
     case actionId.joinA:

@@ -17,23 +17,62 @@ describe("handle", () => {
   it("rejects a missing key and a bad signature before touching storage", async () => {
     const repo = throwingRepo()
     const { deps } = harness(repo)
-    const body = mention("2v2x3")
+    const body = mention("2v2")
     expect((await handle(event(body, "wrong-key"), deps)).statusCode).toBe(401)
     expect((await handle(event(body, apiKey, "v0=deadbeef"), deps)).statusCode).toBe(401)
   })
 
-  it("posts a new game without adding the caller", async () => {
+  it("posts a new 2v2 that asks for a mode, without adding the caller", async () => {
     const { deps, repo, messages } = harness()
-    const response = await handle(event(mention("2v2x3")), deps)
+    const response = await handle(event(mention("2v2")), deps)
     expect(response).toEqual({ statusCode: 200, body: "" })
     expect(messages[0]?.channelId).toBe("C1")
-    expect(messages[0]?.text).toContain("New 2v2 long game")
-    const blocks = messages[0]?.blocks as Array<{ type: string; elements?: Array<{ action_id: string }> }>
-    expect(blocks.flatMap((block) => block.elements?.map((element) => element.action_id) ?? [])).toContain("game_join")
+    expect(messages[0]?.text).toBe("New 2v2")
+    expect(idsOf(messages[0]?.blocks)).toEqual([
+      "game_2v2_random",
+      "game_2v2_teams",
+      "game_2v2_long",
+      "game_cancel",
+    ])
     const stored = await repo.get("T1", "game-1")
-    expect(stored?.game.phase === "open" && stored.game.players).toEqual([])
-    expect(stored?.game.phase === "open" && stored.game.format).toBe("doubles")
-    expect(stored?.game.createdBy).toBe("U1")
+    expect(stored?.game).toMatchObject({ phase: "setup", format: "2v2", players: [], createdBy: "U1" })
+  })
+
+  it("lets anyone cancel a 2v2 during setup", async () => {
+    const { deps, repo, updates, notes } = harness()
+    await handle(event(mention("2v2")), deps)
+    await handle(event(payload({ action_id: "game_cancel", value: "game-1", user: "U9", username: "zed" })), deps)
+    expect(notes).toEqual([])
+    expect(updates[0]?.text).toBe("2v2 cancelled")
+    expect(idsOf(updates[0]?.blocks)).toEqual([])
+    expect((await repo.get("T1", "game-1"))?.game).toMatchObject({ phase: "cancelled", cancelledBy: { userId: "U9" } })
+  })
+
+  it("replaces the setup with the chosen mode and draws random teams at start", async () => {
+    const { deps, repo, messages, updates, notes } = harness()
+    deps.random = () => 0
+    await handle(event(mention("2v2")), deps)
+
+    await handle(event(payload({ action_id: "game_2v2_random", value: "game-1", user: "U9", username: "zed" })), deps)
+    expect(updates.at(-1)?.messageTs).toBe("111.222")
+    expect(idsOf(updates.at(-1)?.blocks)).toEqual(["game_join", "game_leave", "game_cancel"])
+    expect(updates.at(-1)?.text).toBe("New 2v2 game (0/4)")
+
+    await handle(event(payload({ action_id: "game_2v2_long", value: "game-1", user: "U9", username: "zed" })), deps)
+    expect(notes).toEqual([{ channelId: "C1", userId: "U9", text: copy.wrongPhase }])
+    expect(updates).toHaveLength(1)
+    expect((await repo.get("T1", "game-1"))?.game.format).toBe("random")
+
+    for (const id of ["A", "B", "C", "D"]) {
+      await handle(event(payload({ action_id: "game_join", value: "game-1", user: id, username: id })), deps)
+    }
+    await handle(event(payload({ action_id: "game_start", value: "game-1", user: "A", username: "A" })), deps)
+    const stored = await repo.get("T1", "game-1")
+    if (stored?.game.phase !== "active" || stored.game.format !== "match") throw new Error("expected an active 2v2")
+    expect(stored.game.rounds[0].home.map((item) => item.userId)).toEqual(["B", "C"])
+    expect(stored.game.rounds[0].away.map((item) => item.userId)).toEqual(["D", "A"])
+    expect(updates.at(-1)?.text).toBe("2v2 in progress")
+    expect(messages).toHaveLength(1)
   })
 
   it("opens a 1v1 in the channel that mentioned the bot", async () => {
@@ -61,6 +100,9 @@ describe("handle", () => {
     expect(messages[1]?.text).toBe("Unknown command, use `info` for available commands")
     await handle(event(mention("begin")), deps)
     expect(messages[2]?.text).toBe("Unknown command, use `info` for available commands")
+    await handle(event(mention("2v2x3")), deps)
+    expect(messages[3]?.text).toBe("Unknown command, use `info` for available commands")
+    expect(messages[0]?.text).not.toContain("2v2x3")
     expect(await repo.get("T1", "game-1")).toBeUndefined()
   })
 
@@ -92,7 +134,7 @@ describe("handle", () => {
 
   it("verifies a base64-encoded body and ignores other events", async () => {
     const { deps, repo, messages } = harness()
-    const body = mention("2v2x3")
+    const body = mention("2v2")
     const encoded = await handle(
       {
         ...event(body),
@@ -110,7 +152,7 @@ describe("handle", () => {
     expect(messages).toHaveLength(1)
     expect(await repo.listLadders("T1")).toEqual({ doubles: [], singles: [] })
     const games = await repo.get("T1", "game-1")
-    expect(games?.game.phase).toBe("open")
+    expect(games?.game.phase).toBe("setup")
   })
 
   it("updates the message when a player joins and leaves it unchanged when the game is full", async () => {
@@ -284,6 +326,7 @@ function harness(repo: GameRepository = new MemoryRepository()) {
     },
     now: () => nowMs,
     newId: () => "game-1",
+    random: Math.random,
   }
   return { deps, repo, posts, messages, updates, notes }
 }
@@ -343,6 +386,11 @@ function payload(input: { action_id: string; value: string; user: string; userna
       actions: [{ action_id: input.action_id, value: input.value }],
     }),
   }).toString()
+}
+
+function idsOf(blocks: unknown): string[] {
+  const list = blocks as Array<{ elements?: Array<{ action_id: string }> }> | undefined
+  return (list ?? []).flatMap((block) => block.elements?.map((element) => element.action_id) ?? [])
 }
 
 function user(userId: string, displayName = userId) {

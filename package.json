@@ -9,6 +9,7 @@
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
+    "verify": "npm run typecheck && npm test",
     "cdk": "cdk",
     "deploy": "tsx scripts/deploy.ts",
     "destroy": "tsx scripts/destroy.ts"

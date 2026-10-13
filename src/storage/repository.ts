@@ -1,4 +1,4 @@
-import type { CompletedGame, Game, Ladder, LadderFormat, OpenGame, PlayerStanding } from "../domain/types"
+import type { CompletedGame, Game, Ladder, LadderFormat, NewGame, PlayerStanding } from "../domain/types"
 
 export type StoredGame = {
   version: number
@@ -6,7 +6,7 @@ export type StoredGame = {
 }
 
 export interface GameRepository {
-  create(game: OpenGame): Promise<StoredGame>
+  create(game: NewGame): Promise<StoredGame>
   get(teamId: string, gameId: string): Promise<StoredGame | undefined>
   compareAndSwap(expectedVersion: number, game: Game): Promise<"ok" | "conflict">
   complete(

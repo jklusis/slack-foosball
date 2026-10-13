@@ -5,10 +5,14 @@ export type Player = {
 
 export type Side = "home" | "away"
 export type Team = "A" | "B"
+// Stored names: "singles" is a 1v1, "match" a single 2v2, "doubles" a 2v2 long game. Both 2v2s rate on the "doubles" ladder.
 export type Format = "doubles" | "singles" | "match"
+// A 2v2 has format "2v2" until a mode is chosen. A random-teams 2v2 is "random" until it starts, then a "match".
+export type GameFormat = Format | "random" | "2v2"
 export type LadderFormat = "doubles" | "singles"
+export type Mode2v2 = "random" | "teams" | "long"
 
-export function ladderFormat(format: Format): LadderFormat {
+export function ladderFormat(format: GameFormat): LadderFormat {
   return format === "singles" ? "singles" : "doubles"
 }
 
@@ -84,15 +88,26 @@ export type Ladder = {
   singles: PlayerStanding[]
 }
 
-type GameBase = {
+export type GameBase = {
   id: string
   teamId: string
   channelId: string
   createdBy: string
 }
 
+export function baseOf(game: GameBase): GameBase {
+  return { id: game.id, teamId: game.teamId, channelId: game.channelId, createdBy: game.createdBy }
+}
+
+export function rosterSize(format: "singles" | "doubles" | "random"): number {
+  return format === "singles" ? 2 : 4
+}
+
+export type Setup2v2Game = GameBase & { phase: "setup"; format: "2v2"; players: [] }
+
 export type OpenGame =
   | (GameBase & { phase: "open"; format: "singles" | "doubles"; players: Player[] })
+  | (GameBase & { phase: "open"; format: "random"; players: Player[] })
   | (GameBase & {
       phase: "open"
       format: "match"
@@ -142,12 +157,15 @@ export type CompletedGame =
 
 export type CancelledGame = GameBase & {
   phase: "cancelled"
-  format: Format
+  format: GameFormat
   players: Player[]
   cancelledBy: Player
 }
 
-export type Game = OpenGame | ActiveGame | ReportingGame | CompletedGame | CancelledGame
+export type NewGame = Setup2v2Game | OpenGame
+export type NewGameKind = "singles" | "2v2"
+
+export type Game = Setup2v2Game | OpenGame | ActiveGame | ReportingGame | CompletedGame | CancelledGame
 
 export const Reason = {
   gameFull: "game-full",
@@ -171,6 +189,7 @@ export const FlowReason = {
 export type FlowReason = (typeof FlowReason)[keyof typeof FlowReason]
 
 export type Click =
+  | { type: "choose2v2"; mode: Mode2v2 }
   | { type: "join"; team?: Team }
   | { type: "leave" }
   | { type: "cancel" }

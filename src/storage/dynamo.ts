@@ -6,7 +6,7 @@ import {
   QueryCommand,
   TransactWriteCommand,
 } from "@aws-sdk/lib-dynamodb"
-import type { CompletedGame, Game, Ladder, LadderFormat, OpenGame, PlayerStanding } from "../domain/types"
+import type { CompletedGame, Game, Ladder, LadderFormat, NewGame, PlayerStanding } from "../domain/types"
 import { ladderFormat } from "../domain/types"
 import {
   gameFromItem,
@@ -37,7 +37,7 @@ export class DynamoRepository implements GameRepository {
       (DynamoDBDocumentClient.from(new DynamoDBClient({})) as unknown as DocumentSender)
   }
 
-  async create(game: OpenGame): Promise<StoredGame> {
+  async create(game: NewGame): Promise<StoredGame> {
     const stored = { version: 1, game }
     await this.client.send(
       new PutCommand({

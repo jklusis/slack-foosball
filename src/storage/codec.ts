@@ -3,7 +3,8 @@ import type {
   CompletedGame,
   DecidedRound,
   DecidedRoundOf,
-  Format,
+  GameBase,
+  GameFormat,
   LadderFormat,
   FourPlayers,
   Game,
@@ -130,12 +131,17 @@ function standing(record: PlayerRecord, rating: Rating): PlayerStanding {
 
 function gameFromPhase(
   phase: string,
-  format: Format,
-  base: { id: string; teamId: string; channelId: string; createdBy: string },
+  format: GameFormat,
+  base: GameBase,
   players: Player[],
   item: Item,
 ): Game {
+  if (phase === "setup") {
+    if (format !== "2v2") throw new Error(`A setup game cannot have format ${format}`)
+    return { ...base, phase, format, players: [] }
+  }
   if (phase === "open") {
+    if (format === "2v2") throw new Error("An open game cannot have format 2v2")
     if (format === "match") {
       return {
         ...base,
@@ -154,6 +160,9 @@ function gameFromPhase(
     const cancelled: CancelledGame = { ...base, phase, format, players, cancelledBy }
     return cancelled
   }
+  if (format === "random" || format === "2v2") {
+    throw new Error(`A ${phase} game cannot have format ${format}`)
+  }
   if (format === "singles") return singlesFromPhase(phase, base, players, item)
   if (format === "match") return matchFromPhase(phase, base, players, item)
   return doublesFromPhase(phase, base, players, item)
@@ -161,7 +170,7 @@ function gameFromPhase(
 
 function doublesFromPhase(
   phase: string,
-  base: { id: string; teamId: string; channelId: string; createdBy: string },
+  base: GameBase,
   players: Player[],
   item: Item,
 ): Game {
@@ -190,7 +199,7 @@ function doublesFromPhase(
 
 function matchFromPhase(
   phase: string,
-  base: { id: string; teamId: string; channelId: string; createdBy: string },
+  base: GameBase,
   players: Player[],
   item: Item,
 ): Game {
@@ -219,7 +228,7 @@ function matchFromPhase(
 
 function singlesFromPhase(
   phase: string,
-  base: { id: string; teamId: string; channelId: string; createdBy: string },
+  base: GameBase,
   players: Player[],
   item: Item,
 ): Game {
@@ -357,9 +366,11 @@ function readChange(value: unknown): RatingChange | undefined {
   return { userId, displayName, before, after, wins, losses }
 }
 
-function readFormat(value: unknown): Format | undefined {
+function readFormat(value: unknown): GameFormat | undefined {
   if (value === undefined) return "doubles"
-  if (value === "doubles" || value === "singles" || value === "match") return value
+  if (value === "doubles" || value === "singles" || value === "match" || value === "random" || value === "2v2") {
+    return value
+  }
   return undefined
 }
 

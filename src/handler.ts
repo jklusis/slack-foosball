@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto"
 import { handleAction } from "./app/session"
-import type { OpenGame } from "./domain/types"
+import { newGame } from "./domain/game"
 import { Reason } from "./domain/types"
 import { rejectionText } from "./slack/copy"
 import { parseSlackBody, type ParsedSlack } from "./slack/parse"
@@ -22,6 +22,7 @@ export type Deps = {
   channel: ChannelPoster
   now: () => number
   newId?: () => string
+  random?: () => number
 }
 
 type HttpResult = {
@@ -76,34 +77,20 @@ async function dispatch(parsed: ParsedSlack, deps: Deps): Promise<HttpResult> {
     return say(deps.channel, parsed.channelId, renderLadder(ladder))
   }
   if (parsed.kind === "open") {
-    const id = (deps.newId ?? randomUUID)()
-    const game: OpenGame =
-      parsed.format === "match"
-        ? {
-            id,
-            teamId: parsed.teamId,
-            channelId: parsed.channelId,
-            createdBy: parsed.userId,
-            phase: "open",
-            format: "match",
-            players: [],
-            teamA: [],
-            teamB: [],
-          }
-        : {
-            id,
-            teamId: parsed.teamId,
-            channelId: parsed.channelId,
-            createdBy: parsed.userId,
-            phase: "open",
-            format: parsed.format,
-            players: [],
-          }
+    const game = newGame(
+      {
+        id: (deps.newId ?? randomUUID)(),
+        teamId: parsed.teamId,
+        channelId: parsed.channelId,
+        createdBy: parsed.userId,
+      },
+      parsed.format,
+    )
     await deps.repo.create(game)
     return say(deps.channel, parsed.channelId, renderGame(game))
   }
 
-  const outcome = await handleAction(deps.repo, parsed)
+  const outcome = await handleAction(deps.repo, parsed, deps.random)
   if (outcome.type === "ephemeral") return note(deps, parsed, rejectionText(outcome.reason))
   return revise(deps, parsed, renderGame(outcome.game))
 }
