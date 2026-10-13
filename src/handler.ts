@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto"
 import { handleAction } from "./app/session"
-import type { NewGame } from "./domain/types"
+import { newGame } from "./domain/game"
 import { Reason } from "./domain/types"
 import { rejectionText } from "./slack/copy"
 import { parseSlackBody, type ParsedSlack } from "./slack/parse"
@@ -77,16 +77,15 @@ async function dispatch(parsed: ParsedSlack, deps: Deps): Promise<HttpResult> {
     return say(deps.channel, parsed.channelId, renderLadder(ladder))
   }
   if (parsed.kind === "open") {
-    const base = {
-      id: (deps.newId ?? randomUUID)(),
-      teamId: parsed.teamId,
-      channelId: parsed.channelId,
-      createdBy: parsed.userId,
-    }
-    const game: NewGame =
-      parsed.format === "singles"
-        ? { ...base, phase: "open", format: "singles", players: [] }
-        : { ...base, phase: "setup", format: "2v2", players: [] }
+    const game = newGame(
+      {
+        id: (deps.newId ?? randomUUID)(),
+        teamId: parsed.teamId,
+        channelId: parsed.channelId,
+        createdBy: parsed.userId,
+      },
+      parsed.format,
+    )
     await deps.repo.create(game)
     return say(deps.channel, parsed.channelId, renderGame(game))
   }

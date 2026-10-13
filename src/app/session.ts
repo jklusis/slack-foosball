@@ -1,4 +1,4 @@
-import { assertNever } from "../assert-never"
+import { assertNever } from "../domain/assert-never"
 import { apply, type GameCommand } from "../domain/game"
 import { FlowReason, ladderFormat, type Click, type Game, type Player, type Rating, type RejectReason } from "../domain/types"
 import type { GameRepository } from "../storage/repository"

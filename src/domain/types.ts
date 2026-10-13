@@ -5,6 +5,7 @@ export type Player = {
 
 export type Side = "home" | "away"
 export type Team = "A" | "B"
+// Stored names: "singles" is a 1v1, "match" a single 2v2, "doubles" a 2v2 long game. Both 2v2s rate on the "doubles" ladder.
 export type Format = "doubles" | "singles" | "match"
 // A 2v2 has format "2v2" until a mode is chosen. A random-teams 2v2 is "random" until it starts, then a "match".
 export type GameFormat = Format | "random" | "2v2"

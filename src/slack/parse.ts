@@ -143,11 +143,11 @@ function clickFrom(
     }
   }
   switch (id) {
-    case actionId.random2v2:
+    case actionId.choose2v2Random:
       return { gameId: value, action: { type: "choose2v2", mode: "random" } }
-    case actionId.teams2v2:
+    case actionId.choose2v2Teams:
       return { gameId: value, action: { type: "choose2v2", mode: "teams" } }
-    case actionId.long2v2:
+    case actionId.choose2v2Long:
       return { gameId: value, action: { type: "choose2v2", mode: "long" } }
     case actionId.join:
       return { gameId: value, action: { type: "join" } }

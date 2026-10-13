@@ -76,9 +76,9 @@ function renderSetup2v2(game: Setup2v2Game): SlackView {
     blocks: [
       section("*New 2v2*\nChoose how to play."),
       actions([
-        button(actionId.random2v2, "Single 2v2 game, random assignments", game.id),
-        button(actionId.teams2v2, "Single 2v2 game, manual team join", game.id),
-        button(actionId.long2v2, "Long 2v2 game, each plays with everyone", game.id),
+        button(actionId.choose2v2Random, "Single 2v2 game, random assignments", game.id),
+        button(actionId.choose2v2Teams, "Single 2v2 game, manual team join", game.id),
+        button(actionId.choose2v2Long, "Long 2v2 game, each plays with everyone", game.id),
         button(actionId.cancel, "Cancel", game.id, "danger"),
       ]),
     ],

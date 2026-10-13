@@ -37,7 +37,7 @@ Node.js is pinned in `.nvmrc`. `npm run verify` must pass with no AWS account an
 
 Keep it lean: clear names, the simplest design that works, and each fact in one place.
 
-- Dependencies point inward. `handler.ts` calls `app/session.ts`, which calls `domain/`. `slack/` and `storage/` translate to and from domain types. `domain/` imports nothing outside itself and does no I/O; randomness and time come in as arguments.
+- Dependencies point inward. `handler.ts` and `app/` call `domain/`. `slack/` and `storage/` translate to and from domain types. `domain/` imports nothing outside itself and does no I/O; randomness and time come in as arguments.
 - One module, one reason to change. Add a helper when a second caller needs it, in the module both callers already use (`rosterSize` lives in the domain, not in `render.ts` and again in `game.ts`).
 - Name for scope. Code that serves one format says so (`renderSetup2v2`, `Mode2v2`), so nobody reuses it for a 1v1 by mistake.
 - Before adding a branch on `format`, find the existing one and extend it. Two functions that differ only by format should be one function.
@@ -56,9 +56,9 @@ await deps.channel.update(channelId, messageTs, view)
 return { statusCode: 200, body: "" }
 
 // Bad: a throw for something a player did.
-if (game.players.length !== 4) throw new Error("not enough players")
+if (!hasPlayer(game.players, userId)) throw new Error("not a player")
 // Good: a value the edge turns into an ephemeral note.
-if (game.players.length !== rosterSize(game.format)) return reject(Reason.needFour)
+if (!hasPlayer(game.players, userId)) return reject(Reason.notAPlayer)
 ```
 
 ## Tests
@@ -73,7 +73,7 @@ Use Vitest, with no AWS account and no network. Test behavior a player would not
 ## AWS and Slack
 
 - One Lambda, Node.js 26, Function URL auth `NONE`, payload format 2.0. The handler rejects callers who lack the key.
-- Read `FOOSBALL_API_KEY`, `SLACK_SIGNING_SECRET`, and `SLACK_BOT_TOKEN` from the environment. Fail startup if any is missing. The bot token is only for `chat.postMessage`.
+- Read `FOOSBALL_API_KEY`, `SLACK_SIGNING_SECRET`, and `SLACK_BOT_TOKEN` from the environment. Fail startup if any is missing. The bot token is only for `chat.postMessage`, `chat.update`, and `chat.postEphemeral`.
 - Generating a new API key on every deploy breaks the URL already pasted into Slack. Reuse `FOOSBALL_API_KEY` when it is set.
 - Tables stay on-demand. Destroying the stack deletes them.
 - Tag every stack resource `ManagedBy=foosball-aws-cdk`. Bootstrap uses the same tag.

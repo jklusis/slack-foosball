@@ -1,4 +1,4 @@
-import { assertNever } from "../assert-never"
+import { assertNever } from "./assert-never"
 import { rateSession } from "./elo"
 import { matchRound, pairings, randomTeams, singlesMatch } from "./pairings"
 import { Reason, baseOf, requireFour, requireTwo, rosterSize } from "./types"
@@ -11,6 +11,7 @@ import type {
   GameBase,
   GameFormat,
   Mode2v2,
+  NewGame,
   RoundOf,
   Game,
   OpenGame,
@@ -19,7 +20,6 @@ import type {
   Rating,
   RejectReason,
   ReportingGame,
-  Round,
   Setup2v2Game,
   Side,
   Team,
@@ -43,10 +43,15 @@ export type ApplyResult =
   | { kind: "save"; game: Exclude<Game, CompletedGame> }
   | { kind: "complete"; game: CompletedGame; standings: PlayerStanding[] }
 
+export function newGame(base: GameBase, kind: "singles" | "2v2"): NewGame {
+  if (kind === "singles") return { ...baseOf(base), phase: "open", format: "singles", players: [] }
+  return { ...baseOf(base), phase: "setup", format: "2v2", players: [] }
+}
+
 export function apply(game: Game, command: GameCommand): ApplyResult {
   switch (command.type) {
     case "choose2v2":
-      return choose2v2Mode(game, command.mode)
+      return choose2v2(game, command.mode)
     case "join":
       return join(game, command.player, command.team)
     case "leave":
@@ -72,7 +77,7 @@ const openFormat2v2 = { random: "random", teams: "match", long: "doubles" } as c
   OpenGame["format"]
 >
 
-function choose2v2Mode(game: Game, mode: Mode2v2): ApplyResult {
+function choose2v2(game: Game, mode: Mode2v2): ApplyResult {
   const format = openFormat2v2[mode]
   if (game.phase === "setup") return saveGame(open2v2(game, format))
   // A second click on the same mode re-renders. Switching modes after the choice is not offered.
@@ -238,17 +243,16 @@ function finish(game: Game, userId: string): ApplyResult {
 function pick(game: Game, userId: string, roundIndex: 0 | 1 | 2, side: Side): ApplyResult {
   if (game.phase !== "reporting") return reject(Reason.wrongPhase)
   if (!hasPlayer(game.players, userId)) return reject(Reason.notAPlayer)
-  if (game.format === "singles" || game.format === "match") {
-    if (roundIndex !== 0) return reject(Reason.wrongPhase)
-    return pickOnlyRound(game, side)
-  }
+  // A single game has only round 0, so a click on another round is stale.
   const current = game.rounds[roundIndex]
-  if (!current) throw new Error("Missing round")
+  if (!current) return reject(Reason.wrongPhase)
   if (current.winner === side) return keep(game)
-  const rounds = game.rounds.map((item, index) =>
-    index === roundIndex ? { ...item, winner: side } : item,
-  )
-  return saveGame({ ...game, rounds: asThree(rounds) })
+  return saveGame(withWinner(game, roundIndex, side))
+}
+
+function withWinner<G extends ReportingGame>(game: G, roundIndex: number, side: Side): G {
+  const rounds = game.rounds.map((round, index) => (index === roundIndex ? { ...round, winner: side } : round))
+  return { ...game, rounds }
 }
 
 function save(game: Game, userId: string, ratings: ReadonlyMap<string, Rating>): ApplyResult {
@@ -258,22 +262,6 @@ function save(game: Game, userId: string, ratings: ReadonlyMap<string, Rating>):
   if (game.format === "singles") return saveSingles(game, ratings)
   if (game.format === "match") return saveMatchResult(game, ratings)
   return saveDoubles(game, ratings)
-}
-
-function pickOnlyRound(
-  game: Extract<ReportingGame, { format: "singles" | "match" }>,
-  side: Side,
-): ApplyResult {
-  if (game.format === "singles") {
-    const current = game.rounds[0]
-    if (!current) throw new Error("Missing round")
-    if (current.winner === side) return keep(game)
-    return saveGame({ ...game, rounds: [{ ...current, winner: side }] })
-  }
-  const current = game.rounds[0]
-  if (!current) throw new Error("Missing round")
-  if (current.winner === side) return keep(game)
-  return saveGame({ ...game, rounds: [{ ...current, winner: side }] })
 }
 
 function saveSingles(
@@ -349,14 +337,6 @@ function decided(rounds: ThreeRounds): ThreeDecided | undefined {
   })
   const [first, second, third] = converted
   if (!first || !second || !third) return undefined
-  return [first, second, third]
-}
-
-function asThree(rounds: Round[]): ThreeRounds {
-  const [first, second, third] = rounds
-  if (!first || !second || !third || rounds.length !== 3) {
-    throw new Error("Expected three rounds")
-  }
   return [first, second, third]
 }
 

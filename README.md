@@ -43,7 +43,7 @@ stateDiagram-v2
 
 `@Foosball 2v2` first posts a setup message with one button per mode and Cancel. Anyone who can see it may choose. The choice replaces the setup with that mode's open game, and the mode cannot change after that. To play another mode, cancel the game and open a new one.
 
-| Mode2v2 | Button | Roster | Games |
+| Mode | Button | Roster | Games |
 | --- | --- | --- | --- |
 | Random teams | Single 2v2 game, random assignments | Four players join, 0/4 | One. Teams are drawn at random when the game starts. |
 | Chosen teams | Single 2v2 game, manual team join | Players join Team A or Team B, 0/2 each | One, Team A against Team B |
@@ -192,8 +192,8 @@ src/app/session.ts         Apply a click and persist the result
 src/handler.ts             Verify, route, and reply
 src/config.ts              Environment
 src/domain/                Ratings, pairings, transitions. No I/O.
-src/slack/                 Verify, parse, render, chat.postMessage, response_url
-src/storage/               Repository interface and DynamoDB adapter
+src/slack/                 Verify, parse, render, chat.* calls, response_url fallback
+src/storage/               Repository interface, codec, DynamoDB and in-memory adapters
 test/                      Mirrors src
 slack/manifest.yml         Slack app to install
 ```
@@ -267,7 +267,7 @@ CloudFormation asks for confirmation, then deletes the Lambda, the function URL,
 | --- | --- |
 | Language | TypeScript, strict, one package for the handler and CDK |
 | Slack framework | None. A small parser keeps the raw body available for signature checks and keeps tests free of Bolt. |
-| Auth | API key on the request URL, Slack's signing secret, and a bot token used only to post mention replies |
+| Auth | API key on the request URL, Slack's signing secret, and a bot token used only for `chat.postMessage`, `chat.update`, and `chat.postEphemeral` |
 | Secrets | Environment variables only |
 | Ratings | Separate 1v1 and 2v2 ladders. Average team rating, K=32, integer, applied per game in order |
 | Pairings | A random-teams 2v2 draws its teams at start. A chosen-teams 2v2 is Team A vs Team B. A 2v2 long game rotates partners from join order. A 1v1 is one game |

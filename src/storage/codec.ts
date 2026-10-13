@@ -3,6 +3,7 @@ import type {
   CompletedGame,
   DecidedRound,
   DecidedRoundOf,
+  GameBase,
   GameFormat,
   LadderFormat,
   FourPlayers,
@@ -131,7 +132,7 @@ function standing(record: PlayerRecord, rating: Rating): PlayerStanding {
 function gameFromPhase(
   phase: string,
   format: GameFormat,
-  base: { id: string; teamId: string; channelId: string; createdBy: string },
+  base: GameBase,
   players: Player[],
   item: Item,
 ): Game {
@@ -169,7 +170,7 @@ function gameFromPhase(
 
 function doublesFromPhase(
   phase: string,
-  base: { id: string; teamId: string; channelId: string; createdBy: string },
+  base: GameBase,
   players: Player[],
   item: Item,
 ): Game {
@@ -198,7 +199,7 @@ function doublesFromPhase(
 
 function matchFromPhase(
   phase: string,
-  base: { id: string; teamId: string; channelId: string; createdBy: string },
+  base: GameBase,
   players: Player[],
   item: Item,
 ): Game {
@@ -227,7 +228,7 @@ function matchFromPhase(
 
 function singlesFromPhase(
   phase: string,
-  base: { id: string; teamId: string; channelId: string; createdBy: string },
+  base: GameBase,
   players: Player[],
   item: Item,
 ): Game {
