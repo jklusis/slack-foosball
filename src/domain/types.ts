@@ -163,6 +163,7 @@ export type CancelledGame = GameBase & {
 }
 
 export type NewGame = Setup2v2Game | OpenGame
+export type NewGameKind = "singles" | "2v2"
 
 export type Game = Setup2v2Game | OpenGame | ActiveGame | ReportingGame | CompletedGame | CancelledGame
 

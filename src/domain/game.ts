@@ -12,6 +12,7 @@ import type {
   GameFormat,
   Mode2v2,
   NewGame,
+  NewGameKind,
   RoundOf,
   Game,
   OpenGame,
@@ -43,7 +44,7 @@ export type ApplyResult =
   | { kind: "save"; game: Exclude<Game, CompletedGame> }
   | { kind: "complete"; game: CompletedGame; standings: PlayerStanding[] }
 
-export function newGame(base: GameBase, kind: "singles" | "2v2"): NewGame {
+export function newGame(base: GameBase, kind: NewGameKind): NewGame {
   if (kind === "singles") return { ...baseOf(base), phase: "open", format: "singles", players: [] }
   return { ...baseOf(base), phase: "setup", format: "2v2", players: [] }
 }
@@ -251,8 +252,15 @@ function pick(game: Game, userId: string, roundIndex: 0 | 1 | 2, side: Side): Ap
 }
 
 function withWinner<G extends ReportingGame>(game: G, roundIndex: number, side: Side): G {
-  const rounds = game.rounds.map((round, index) => (index === roundIndex ? { ...round, winner: side } : round))
+  const rounds: G["rounds"] = mapTuple(game.rounds, (round, index) =>
+    index === roundIndex ? { ...round, winner: side } : round,
+  )
   return { ...game, rounds }
+}
+
+// map keeps a tuple's length, but TypeScript widens the result to an array. This is the one place that casts it back.
+function mapTuple<T extends readonly unknown[]>(items: T, change: (item: T[number], index: number) => T[number]): T {
+  return items.map(change) as unknown as T
 }
 
 function save(game: Game, userId: string, ratings: ReadonlyMap<string, Rating>): ApplyResult {

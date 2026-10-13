@@ -189,6 +189,7 @@ Game phases are a discriminated union on `phase` and `format`. `format` is `sing
 bin/app.ts                 CDK entry
 infra/foosball-stack.ts    Function URL, tables, outputs
 src/app/session.ts         Apply a click and persist the result
+src/lambda.ts              Lambda entry: wires config, Slack clients, and DynamoDB
 src/handler.ts             Verify, route, and reply
 src/config.ts              Environment
 src/domain/                Ratings, pairings, transitions. No I/O.

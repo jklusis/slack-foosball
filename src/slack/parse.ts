@@ -1,4 +1,4 @@
-import type { Click, Player } from "../domain/types"
+import type { Click, NewGameKind, Player } from "../domain/types"
 import { actionId, decodePick, isPick } from "./actions"
 
 export type ParsedSlack =
@@ -9,7 +9,7 @@ export type ParsedSlack =
   | { kind: "ping"; channelId: string }
   | {
       kind: "open"
-      format: "singles" | "2v2"
+      format: NewGameKind
       teamId: string
       channelId: string
       userId: string

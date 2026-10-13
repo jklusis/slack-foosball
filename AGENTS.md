@@ -37,7 +37,7 @@ Node.js is pinned in `.nvmrc`. `npm run verify` must pass with no AWS account an
 
 Keep it lean: clear names, the simplest design that works, and each fact in one place.
 
-- Dependencies point inward. `handler.ts` and `app/` call `domain/`. `slack/` and `storage/` translate to and from domain types. `domain/` imports nothing outside itself and does no I/O; randomness and time come in as arguments.
+- Dependencies point inward. `handler.ts` and `app/` call `domain/`, and reach storage only through the repository interface. `slack/` and `storage/` translate to and from domain types. `domain/` imports nothing outside itself and does no I/O; randomness and time come in as arguments.
 - One module, one reason to change. Add a helper when a second caller needs it, in the module both callers already use (`rosterSize` lives in the domain, not in `render.ts` and again in `game.ts`).
 - Name for scope. Code that serves one format says so (`renderSetup2v2`, `Mode2v2`), so nobody reuses it for a 1v1 by mistake.
 - Before adding a branch on `format`, find the existing one and extend it. Two functions that differ only by format should be one function.

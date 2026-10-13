@@ -243,6 +243,12 @@ describe("game transitions", () => {
     expect(started.rounds[0]?.away.map((item) => item.userId)).toEqual(["B", "C"])
 
     const reporting = saved(apply(started, { type: "finish", userId: "A" }))
+    for (const round of [1, 2] as const) {
+      expect(apply(reporting, { type: "pick", userId: "B", round, side: "home" })).toEqual({
+        kind: "reject",
+        reason: Reason.wrongPhase,
+      })
+    }
     const picked = saved(apply(reporting, { type: "pick", userId: "B", round: 0, side: "home" }))
     const result = apply(picked, { type: "save", userId: "A", ratings: new Map() })
     expect(result.kind).toBe("complete")
