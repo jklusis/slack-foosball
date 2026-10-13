@@ -3,7 +3,7 @@ import type {
   CompletedGame,
   DecidedRound,
   DecidedRoundOf,
-  Format,
+  GameFormat,
   LadderFormat,
   FourPlayers,
   Game,
@@ -130,12 +130,17 @@ function standing(record: PlayerRecord, rating: Rating): PlayerStanding {
 
 function gameFromPhase(
   phase: string,
-  format: Format,
+  format: GameFormat,
   base: { id: string; teamId: string; channelId: string; createdBy: string },
   players: Player[],
   item: Item,
 ): Game {
+  if (phase === "setup") {
+    if (format !== "pending") throw new Error(`A setup game cannot have format ${format}`)
+    return { ...base, phase, format, players: [] }
+  }
   if (phase === "open") {
+    if (format === "pending") throw new Error("An open game cannot have format pending")
     if (format === "match") {
       return {
         ...base,
@@ -153,6 +158,9 @@ function gameFromPhase(
     if (!cancelledBy) throw new Error("Cancelled game is missing cancelledBy")
     const cancelled: CancelledGame = { ...base, phase, format, players, cancelledBy }
     return cancelled
+  }
+  if (format === "random" || format === "pending") {
+    throw new Error(`A ${phase} game cannot have format ${format}`)
   }
   if (format === "singles") return singlesFromPhase(phase, base, players, item)
   if (format === "match") return matchFromPhase(phase, base, players, item)
@@ -357,9 +365,11 @@ function readChange(value: unknown): RatingChange | undefined {
   return { userId, displayName, before, after, wins, losses }
 }
 
-function readFormat(value: unknown): Format | undefined {
+function readFormat(value: unknown): GameFormat | undefined {
   if (value === undefined) return "doubles"
-  if (value === "doubles" || value === "singles" || value === "match") return value
+  if (value === "doubles" || value === "singles" || value === "match" || value === "random" || value === "pending") {
+    return value
+  }
   return undefined
 }
 

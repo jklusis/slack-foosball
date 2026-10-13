@@ -7,6 +7,7 @@ import type {
   CompletedGame,
   OpenGame,
   ReportingGame,
+  SetupGame,
   ThreeDecided,
   ThreeRounds,
 } from "../../src/domain/types"
@@ -78,7 +79,18 @@ describe("game codec", () => {
       teamA: [players[0]],
       teamB: [players[2]],
     }
-    for (const game of [open, match, active, reporting, completedResult.game, cancelled]) {
+    const setup: SetupGame = {
+      id: "game-1",
+      teamId: "T1",
+      channelId: "C1",
+      createdBy: "Z",
+      phase: "setup",
+      format: "pending",
+      players: [],
+    }
+    const random: OpenGame = { ...setup, phase: "open", format: "random", players: [players[3]] }
+    const cancelledSetup: CancelledGame = { ...cancelled, format: "pending", players: [] }
+    for (const game of [setup, random, cancelledSetup, open, match, active, reporting, completedResult.game, cancelled]) {
       expect(gameFromItem(gameToItem({ version: 4, game }))).toEqual({ version: 4, game })
     }
   })
@@ -106,6 +118,13 @@ describe("game codec", () => {
     const item = gameToItem({ version: 1, game })
     delete item.ratingChanges
     expect(() => gameFromItem(item)).toThrow(/results/)
+  })
+
+  it("rejects a stored game whose format cannot be in its phase", () => {
+    const setup = { teamId: "T1", gameId: "game-1", version: 1, channelId: "C1", createdBy: "Z", players: [] }
+    expect(() => gameFromItem({ ...setup, phase: "setup", format: "doubles" })).toThrow(/format/)
+    expect(() => gameFromItem({ ...setup, phase: "open", format: "pending" })).toThrow(/format/)
+    expect(() => gameFromItem({ ...setup, phase: "active", format: "random", rounds: [] })).toThrow(/format/)
   })
 
   it("reads a game saved before formats existed as doubles", () => {

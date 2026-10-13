@@ -1,6 +1,9 @@
 import type { Side } from "../domain/types"
 
 export const actionId = {
+  modeRandom: "game_mode_random",
+  modeTeams: "game_mode_teams",
+  modeLong: "game_mode_long",
   join: "game_join",
   joinA: "game_join_a",
   joinB: "game_join_b",

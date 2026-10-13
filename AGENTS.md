@@ -24,11 +24,12 @@ Node.js is pinned in `.nvmrc`. `npm run verify` must pass with no AWS account an
 
 - Ratings start at 1000 in each format, K is 32, team rating is the average (a 1v1 side is one player), games in one session apply in order.
 - A 2v2 result does not change a 1v1 rating, and the reverse. Save applies ratings once. A second save renders the completed game.
-- Join order is the pairing order for a 2v2 long game. A 2v2 is Team A against Team B. The person who mentions `@Foosball 1v1`, `@Foosball 2v2`, or `@Foosball 2v2x3` is not on the roster until they join.
+- `@Foosball 2v2` opens a setup step. Choosing a mode turns it into a 2v2 with random teams, a 2v2 with chosen teams, or a 2v2 long game. All three use the 2v2 ladder.
+- Join order is the pairing order for a 2v2 long game. A random-teams 2v2 draws its teams at Start. The person who mentions `@Foosball 1v1` or `@Foosball 2v2` is not on the roster until they join.
 - Start exists only when the roster is full: two players for 1v1, four for 2v2. Join and Leave both exist for the whole open phase.
-- After start, only those players can finish, cancel, pick, or save. Anyone can cancel while the game is open.
+- After start, only those players can finish, cancel, pick, or save. Anyone can choose a mode, and anyone can cancel while the game is in setup or open.
 - An inapplicable click sends an ephemeral reply and does not change the message.
-- Games and players are keyed by Slack `team_id`.
+- Games and players are keyed by Slack `team_id`. Games already stored keep loading after a change to the game shape.
 - Verify the API key and the Slack signature on the raw body before parsing. Compare secrets in constant time. Mention replies go out with `chat.postMessage`. Button updates use `chat.update` on that message, and `response_url` is only the fallback because it expires after 30 minutes. A private note uses `chat.postEphemeral`. The HTTP response to a mention or a button click is 200, not the new message.
 - Roster and phase writes are conditional. A failed condition becomes an ephemeral reply or an idempotent re-render, never a second rating update.
 
@@ -39,6 +40,7 @@ Node.js is pinned in `.nvmrc`. `npm run verify` must pass with no AWS account an
 - Expected user outcomes (`not-a-player`, `game-full`) are return values. Throw only when the process cannot continue (bad config, failed I/O, a broken invariant).
 - Strict TypeScript. No `any`, and no non-null assertion to paper over a missing check.
 - Parse and validate at the handler boundary. The rest of the code accepts domain types.
+- Domain code stays pure. Randomness and time come in as arguments.
 - Prefer a short pure function over a class that only holds functions.
 - Comments explain a non-obvious constraint (Slack's 3 second ack, raw-body signature). Do not comment the mechanics the code already shows.
 
@@ -46,7 +48,7 @@ Node.js is pinned in `.nvmrc`. `npm run verify` must pass with no AWS account an
 
 Use Vitest, with no AWS account and no network. Test behavior a player would notice or a bug that would corrupt a rating or a roster.
 
-- Cover the transition table: join, leave, start too early, start at four, non-player after start, cancel, pick, save, save again.
+- Cover the transition table: choose a mode, join, leave, start too early, start at four, non-player after start, cancel, pick, save, save again.
 - Cover concurrent-style conditions on the repository: two joins of the same user, a fifth player, a third player on a 1v1, two saves, and a singles save that leaves the doubles rating in place.
 - Handler tests use a fake repository and a fake Slack reply. Assert whether the reply replaces the message or is ephemeral.
 - Assert action ids and who is listed, not a full Block Kit JSON snapshot. Skip tests that only check a mock was called.

@@ -1,7 +1,24 @@
-import type { FourPlayers, RoundOf, ThreeRounds, TwoPlayers } from "./types"
+import { requireFour } from "./types"
+import type { FourPlayers, Player, RoundOf, ThreeRounds, TwoPlayers } from "./types"
 
 export function matchRound(home: TwoPlayers, away: TwoPlayers): [RoundOf<"match">] {
   return [{ home, away, winner: null }]
+}
+
+// Fisher-Yates over all four players, so each of the three team splits is equally likely.
+// `random` returns a number in [0, 1), like Math.random.
+export function randomTeams(players: FourPlayers, random: () => number): [RoundOf<"match">] {
+  const order: Player[] = [...players]
+  for (let index = order.length - 1; index > 0; index -= 1) {
+    const other = Math.min(index, Math.floor(random() * (index + 1)))
+    const current = order[index]
+    const swapped = order[other]
+    if (!current || !swapped) throw new Error("Shuffle out of range")
+    order[index] = swapped
+    order[other] = current
+  }
+  const [first, second, third, fourth] = requireFour(order)
+  return matchRound([first, second], [third, fourth])
 }
 
 export function pairings(players: FourPlayers): ThreeRounds {

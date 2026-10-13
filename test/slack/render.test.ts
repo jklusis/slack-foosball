@@ -25,6 +25,12 @@ function flatRatings(players: FourPlayers): [RatingChange, RatingChange, RatingC
   })) as [RatingChange, RatingChange, RatingChange, RatingChange]
 }
 
+function buttonLabels(blocks: Block[]): string[] {
+  return blocks.flatMap((block) =>
+    block.type === "actions" ? block.elements.map((element) => element.text.text) : [],
+  )
+}
+
 function textOf(blocks: Block[]): string {
   return blocks
     .filter((block) => block.type === "section")
@@ -33,6 +39,67 @@ function textOf(blocks: Block[]): string {
 }
 
 describe("renderGame", () => {
+  it("offers the three 2v2 modes and cancel before anyone can join", () => {
+    const view = renderGame({
+      id: "g1",
+      teamId: "T1",
+      channelId: "C1",
+      createdBy: "Z",
+      phase: "setup",
+      format: "pending",
+      players: [],
+    })
+    expect(actionIds(view.blocks)).toEqual([
+      "game_mode_random",
+      "game_mode_teams",
+      "game_mode_long",
+      "game_cancel",
+    ])
+    expect(buttonLabels(view.blocks)).toEqual([
+      "Single 2v2 game, random assignments",
+      "Single 2v2 game, manual team join",
+      "Long 2v2 game, each plays with everyone",
+      "Cancel",
+    ])
+    expect(textOf(view.blocks)).toContain("*New 2v2*")
+
+    const cancelled = renderGame({
+      id: "g1",
+      teamId: "T1",
+      channelId: "C1",
+      createdBy: "Z",
+      phase: "cancelled",
+      format: "pending",
+      players: [],
+      cancelledBy: player("E", "Eve"),
+    })
+    expect(textOf(cancelled.blocks)).toContain("*2v2 cancelled*")
+    expect(actionIds(cancelled.blocks)).toEqual([])
+  })
+
+  it("fills a random-teams 2v2 to four and says teams are drawn at start", () => {
+    const open = {
+      id: "g1",
+      teamId: "T1",
+      channelId: "C1",
+      createdBy: "Z",
+      phase: "open" as const,
+      format: "random" as const,
+    }
+    const waiting = renderGame({ ...open, players: roster.slice(0, 3) })
+    expect(actionIds(waiting.blocks)).toEqual(["game_join", "game_leave", "game_cancel"])
+    expect(textOf(waiting.blocks)).toContain("*New 2v2 game*")
+    expect(textOf(waiting.blocks)).toContain("Teams are drawn at random when the game starts.")
+    expect(textOf(waiting.blocks)).toContain("Join the game (3/4)")
+    expect(textOf(waiting.blocks)).toContain("4. _waiting_")
+    expect(actionIds(renderGame({ ...open, players: roster }).blocks)).toEqual([
+      "game_start",
+      "game_join",
+      "game_leave",
+      "game_cancel",
+    ])
+  })
+
   it("shows join and leave, and adds start only at four players", () => {
     const waiting = renderGame({
       id: "g1",

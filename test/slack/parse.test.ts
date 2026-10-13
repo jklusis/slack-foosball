@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import { parseSlackBody } from "../../src/slack/parse"
 
 describe("parseSlackBody", () => {
-  it("reads mentions for 1v1, 2v2, top, info, and ping", () => {
+  it("reads mentions for 1v1, 2v2, top, info, and ping, and no longer opens a 2v2x3", () => {
     expect(parseSlackBody(mention("1V1"))).toMatchObject({
       kind: "open",
       format: "singles",
@@ -12,9 +12,9 @@ describe("parseSlackBody", () => {
     })
     expect(parseSlackBody(mention("<@UBOT|Foosball> 2v2", true))).toMatchObject({
       kind: "open",
-      format: "match",
+      format: "pending",
     })
-    expect(parseSlackBody(mention("2v2x3"))).toMatchObject({ kind: "open", format: "doubles" })
+    expect(parseSlackBody(mention("2v2x3"))).toEqual({ kind: "unknown", channelId: "C1" })
     expect(parseSlackBody(mention("top"))).toMatchObject({ kind: "top", teamId: "T1", channelId: "C1" })
     expect(parseSlackBody(mention("info"))).toMatchObject({ kind: "help", channelId: "C1" })
     expect(parseSlackBody(mention(""))).toMatchObject({ kind: "unknown", channelId: "C1" })
@@ -24,6 +24,17 @@ describe("parseSlackBody", () => {
     expect(
       parseSlackBody(JSON.stringify({ type: "event_callback", event: { type: "message", text: "1v1" } })),
     ).toEqual({ kind: "ignore" })
+  })
+
+  it("reads a 2v2 mode button", () => {
+    for (const mode of ["random", "teams", "long"] as const) {
+      expect(parseSlackBody(click(`game_mode_${mode}`, "game-1"))).toMatchObject({
+        kind: "action",
+        gameId: "game-1",
+        action: { type: "mode", mode },
+      })
+    }
+    expect(parseSlackBody(click("game_mode_other", "game-1"))).toMatchObject({ kind: "invalid-action" })
   })
 
   it("reads a pick button", () => {
@@ -62,4 +73,18 @@ function mention(text: string, raw = false): string {
       channel: "C1",
     },
   })
+}
+
+function click(actionId: string, value: string): string {
+  return new URLSearchParams({
+    payload: JSON.stringify({
+      type: "block_actions",
+      team: { id: "T1" },
+      user: { id: "U2", username: "ben" },
+      channel: { id: "C1" },
+      message: { ts: "111.222" },
+      response_url: "https://hooks.slack.com/actions/1",
+      actions: [{ action_id: actionId, value }],
+    }),
+  }).toString()
 }

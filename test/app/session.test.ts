@@ -67,6 +67,48 @@ describe("handleAction", () => {
     expect(started.game.rounds[0]?.away.map((item) => item.userId)).toEqual(["D", "E"])
   })
 
+  it("plays a random-teams 2v2 from setup to a 2v2 rating", async () => {
+    const repo = new MemoryRepository()
+    await repo.create({
+      id: "game-1",
+      teamId: "T1",
+      channelId: "C1",
+      createdBy: "Z",
+      phase: "setup",
+      format: "pending",
+      players: [],
+    })
+    const act = (actor: typeof ada, action: Parameters<typeof handleAction>[1]["action"]) =>
+      handleAction(repo, { teamId: "T1", gameId: "game-1", actor, action }, () => 0.99)
+    expect(await act(eve, { type: "mode", mode: "random" })).toMatchObject({
+      type: "replace",
+      game: { phase: "open", format: "random" },
+    })
+    expect(await act(ada, { type: "mode", mode: "teams" })).toEqual({
+      type: "ephemeral",
+      reason: Reason.wrongPhase,
+    })
+    for (const actor of [ada, ben, cia, dan]) await act(actor, { type: "join" })
+    // A draw just under 1 keeps every player in place, so join order decides the teams.
+    const started = await act(cia, { type: "start" })
+    if (started.type !== "replace" || started.game.phase !== "active") throw new Error("expected active")
+    expect(started.game.format).toBe("match")
+    expect(started.game.rounds[0].home.map((item) => item.userId)).toEqual(["A", "B"])
+    expect(started.game.rounds[0].away.map((item) => item.userId)).toEqual(["C", "D"])
+
+    await act(ada, { type: "finish" })
+    await act(ada, { type: "pick", round: 0, side: "home" })
+    expect(await act(dan, { type: "save" })).toMatchObject({ type: "replace", game: { phase: "completed" } })
+    const ladders = await repo.listLadders("T1")
+    expect(ladders.doubles.map((standing) => [standing.userId, standing.elo]).sort()).toEqual([
+      ["A", 1016],
+      ["B", 1016],
+      ["C", 984],
+      ["D", 984],
+    ])
+    expect(ladders.singles).toEqual([])
+  })
+
   it("applies ratings once when results are saved twice", async () => {
     const repo = new MemoryRepository()
     const players = requireFour([ada, ben, cia, dan])

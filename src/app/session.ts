@@ -10,11 +10,12 @@ export type ActionOutcome =
 export async function handleAction(
   repo: GameRepository,
   input: { teamId: string; gameId: string; actor: Player; action: Click },
+  random: () => number = Math.random,
 ): Promise<ActionOutcome> {
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const stored = await repo.get(input.teamId, input.gameId)
     if (!stored) return { type: "ephemeral", reason: FlowReason.missingGame }
-    const result = apply(stored.game, await commandFor(repo, stored.game, input))
+    const result = apply(stored.game, await commandFor(repo, stored.game, input, random))
     if (result.kind === "reject") return { type: "ephemeral", reason: result.reason }
     if (result.kind === "keep") return { type: "replace", game: result.game }
 
@@ -31,15 +32,19 @@ async function commandFor(
   repo: GameRepository,
   game: Game,
   input: { teamId: string; actor: Player; action: Click },
+  random: () => number,
 ): Promise<GameCommand> {
   const { action, actor } = input
   switch (action.type) {
+    case "mode":
+      return { type: "mode", mode: action.mode }
     case "join":
       return { type: "join", player: actor, team: action.team }
     case "cancel":
       return { type: "cancel", player: actor }
-    case "leave":
     case "start":
+      return { type: "start", userId: actor.userId, random }
+    case "leave":
     case "finish":
       return { type: action.type, userId: actor.userId }
     case "pick":

@@ -3,13 +3,14 @@ import type {
   ActiveGame,
   CancelledGame,
   CompletedGame,
-  Format,
+  GameFormat,
   Game,
   Ladder,
   OpenGame,
   Player,
   PlayerStanding,
   ReportingGame,
+  SetupGame,
   Side,
 } from "../domain/types"
 import { actionId, encodePick } from "./actions"
@@ -36,6 +37,8 @@ export type SlackView = {
 
 export function renderGame(game: Game): SlackView {
   switch (game.phase) {
+    case "setup":
+      return renderSetup(game)
     case "open":
       return renderOpen(game)
     case "active":
@@ -66,6 +69,21 @@ export function renderPong(): SlackView {
   return { text: copy.pong, blocks: [section(copy.pong)] }
 }
 
+function renderSetup(game: SetupGame): SlackView {
+  return {
+    text: "New 2v2",
+    blocks: [
+      section("*New 2v2*\nChoose how to play."),
+      actions([
+        button(actionId.modeRandom, "Single 2v2 game, random assignments", game.id),
+        button(actionId.modeTeams, "Single 2v2 game, manual team join", game.id),
+        button(actionId.modeLong, "Long 2v2 game, each plays with everyone", game.id),
+        button(actionId.cancel, "Cancel", game.id, "danger"),
+      ]),
+    ],
+  }
+}
+
 function renderOpen(game: OpenGame): SlackView {
   if (game.format === "match") return renderOpenMatch(game)
   const size = rosterSize(game.format)
@@ -74,7 +92,8 @@ function renderOpen(game: OpenGame): SlackView {
     const player = game.players[index]
     return `${index + 1}. ${player ? mention(player) : "_waiting_"}`
   }).join("\n")
-  const text = `*${heading}*\nJoin the game (${game.players.length}/${size})\n\n${roster}`
+  const note = game.format === "random" ? "\nTeams are drawn at random when the game starts." : ""
+  const text = `*${heading}*${note}\nJoin the game (${game.players.length}/${size})\n\n${roster}`
   const buttons: Button[] = []
   if (game.players.length === size) buttons.push(button(actionId.start, "Start", game.id, "primary"))
   buttons.push(
@@ -218,18 +237,18 @@ function listLines(lines: string[]): string {
   return lines.map((line, index) => `${index + 1}. ${line}`).join("\n")
 }
 
-function openHeading(format: "singles" | "doubles"): string {
+function openHeading(format: "singles" | "doubles" | "random"): string {
   const label = formatLabel(format)
   return format === "doubles" ? `New ${label}` : `New ${label} game`
 }
 
-function formatLabel(format: Format): string {
+function formatLabel(format: GameFormat): string {
   if (format === "singles") return "1v1"
-  if (format === "match") return "2v2"
-  return "2v2 long game"
+  if (format === "doubles") return "2v2 long game"
+  return "2v2"
 }
 
-function rosterSize(format: "singles" | "doubles"): number {
+function rosterSize(format: "singles" | "doubles" | "random"): number {
   return format === "singles" ? 2 : 4
 }
 

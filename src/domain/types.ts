@@ -6,9 +6,12 @@ export type Player = {
 export type Side = "home" | "away"
 export type Team = "A" | "B"
 export type Format = "doubles" | "singles" | "match"
+// A random-teams 2v2 is "random" until it starts, then a "match". A 2v2 is "pending" until a mode is chosen.
+export type GameFormat = Format | "random" | "pending"
 export type LadderFormat = "doubles" | "singles"
+export type Mode = "random" | "teams" | "long"
 
-export function ladderFormat(format: Format): LadderFormat {
+export function ladderFormat(format: GameFormat): LadderFormat {
   return format === "singles" ? "singles" : "doubles"
 }
 
@@ -91,8 +94,11 @@ type GameBase = {
   createdBy: string
 }
 
+export type SetupGame = GameBase & { phase: "setup"; format: "pending"; players: [] }
+
 export type OpenGame =
   | (GameBase & { phase: "open"; format: "singles" | "doubles"; players: Player[] })
+  | (GameBase & { phase: "open"; format: "random"; players: Player[] })
   | (GameBase & {
       phase: "open"
       format: "match"
@@ -142,12 +148,14 @@ export type CompletedGame =
 
 export type CancelledGame = GameBase & {
   phase: "cancelled"
-  format: Format
+  format: GameFormat
   players: Player[]
   cancelledBy: Player
 }
 
-export type Game = OpenGame | ActiveGame | ReportingGame | CompletedGame | CancelledGame
+export type NewGame = SetupGame | OpenGame
+
+export type Game = SetupGame | OpenGame | ActiveGame | ReportingGame | CompletedGame | CancelledGame
 
 export const Reason = {
   gameFull: "game-full",
@@ -171,6 +179,7 @@ export const FlowReason = {
 export type FlowReason = (typeof FlowReason)[keyof typeof FlowReason]
 
 export type Click =
+  | { type: "mode"; mode: Mode }
   | { type: "join"; team?: Team }
   | { type: "leave" }
   | { type: "cancel" }

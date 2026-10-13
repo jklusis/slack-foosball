@@ -1,6 +1,6 @@
 # Foosball
 
-A Slack app for in-office foosball. Someone opens a 1v1, a 2v2, or a 2v2 long game in a channel, players join, and the matching ladder updates from the results. 1v1 and 2v2 have separate ladders. A 2v2 long game uses the 2v2 ladder.
+A Slack app for in-office foosball. Someone opens a 1v1 or a 2v2 in a channel, players join, and the matching ladder updates from the results. A 2v2 is one game with random teams, one game with teams the players choose, or a long game of three. 1v1 and 2v2 have separate ladders, and every 2v2 mode uses the 2v2 ladder.
 
 The app is one AWS Lambda behind a Function URL, with DynamoDB for games and ratings. AWS CDK deploys it. Install the Slack app from the manifest, deploy, then paste `SlackRequestUrl` into Slack. The API key is already on that URL as `?key=`.
 
@@ -11,8 +11,7 @@ Mention **@Foosball** in a channel the app has been invited to. Slack only deliv
 | Command | Effect |
 | --- | --- |
 | `@Foosball 1v1` | Posts a new 1v1 in that channel. The caller is not added until they press Join. |
-| `@Foosball 2v2` | Posts a new 2v2. Players join Team A or Team B. One game when both teams have two players. |
-| `@Foosball 2v2x3` | Posts a 2v2 long game. Four players, three games, and each person partners with each of the others once. |
+| `@Foosball 2v2` | Posts a new 2v2 and asks for the mode. See [2v2 modes](#2v2-modes). |
 | `@Foosball top` | Posts both workspace ladders in that channel. |
 | `@Foosball info` | Posts what the app is, how a game works, and the commands. |
 | `@Foosball ping` | Checks whether the app is up. The reply is `pong!`. |
@@ -27,7 +26,10 @@ A game is one message. Slack shows that message to everyone, and a button cannot
 
 ```mermaid
 stateDiagram-v2
-  [*] --> open: @Foosball 1v1, 2v2, or 2v2x3
+  [*] --> setup: @Foosball 2v2
+  [*] --> open: @Foosball 1v1
+  setup --> open: Choose a mode
+  setup --> cancelled: Cancel
   open --> open: Join or Leave
   open --> cancelled: Cancel
   open --> active: Start, roster full
@@ -37,9 +39,31 @@ stateDiagram-v2
   reporting --> completed: Save results, by a player
 ```
 
-Roster order is join order. Leaving removes that person and keeps the remaining order. A 2v2 long game uses that order as A, B, C, D. A 2v2 is Team A against Team B. A 1v1 uses join order as A vs B.
+### 2v2 modes
 
-**Open.** A 1v1 starts at 0/2. A 2v2 starts with Team A 0/2 and Team B 0/2. A 2v2 long game starts at 0/4.
+`@Foosball 2v2` first posts a setup message with one button per mode and Cancel. Anyone who can see it may choose. The choice replaces the setup with that mode's open game, and the mode cannot change after that. To play another mode, cancel the game and open a new one.
+
+| Mode | Button | Roster | Games |
+| --- | --- | --- | --- |
+| Random teams | Single 2v2 game, random assignments | Four players join, 0/4 | One. Teams are drawn at random when the game starts. |
+| Chosen teams | Single 2v2 game, manual team join | Players join Team A or Team B, 0/2 each | One, Team A against Team B |
+| Long game | Long 2v2 game, each plays with everyone | Four players join, 0/4 | Three. Each person partners with each of the others once. |
+
+```
+New 2v2
+Choose how to play.
+
+[Single 2v2 game, random assignments] [Single 2v2 game, manual team join]
+[Long 2v2 game, each plays with everyone] [Cancel]
+```
+
+The draw gives each of the three possible team splits the same chance. After the draw, a random-teams game plays, reports, and rates like a chosen-teams game.
+
+### Phases
+
+Roster order is join order. Leaving removes that person and keeps the remaining order. A 2v2 long game uses that order as A, B, C, D. A chosen-teams 2v2 is Team A against Team B. A 1v1 uses join order as A vs B.
+
+**Open.** A 1v1 starts at 0/2. A chosen-teams 2v2 starts with Team A 0/2 and Team B 0/2. A random-teams 2v2 and a 2v2 long game start at 0/4.
 
 ```
 New 2v2 long game
@@ -55,7 +79,7 @@ Join the game (0/4)
 
 Start is added only when the roster is full. Anyone may cancel an open game. Only a joined player may start it.
 
-**Active, 2v2.** One game, Team A vs Team B. Both teammates receive the same rating change.
+**Active, 2v2.** One game, Team A vs Team B, or the drawn teams in a random-teams game. Both teammates receive the same rating change.
 
 **Active, 2v2 long game.** The roster is locked. Pairings, in order:
 
@@ -125,7 +149,7 @@ When nobody is rated in either format, the message says that a first game starts
 
 | Action | Who |
 | --- | --- |
-| Join, Leave, cancel an open game | Anyone who can see the message |
+| Choose a 2v2 mode, Join, Leave, cancel a game in setup or open | Anyone who can see the message |
 | Start, Game finished, Cancel game, pick a winner, Save | The players in that game |
 
 Unauthorized clicks get an ephemeral reply. The player check is one function, so it can be relaxed later without rewriting the flow.
@@ -157,7 +181,7 @@ Two on-demand DynamoDB tables. Deploying again keeps the games and ratings. `mak
 
 **Players.** Partition key `teamId`, sort key `userId`. Holds `displayName` plus a doubles rating and a singles rating. Saving a game updates only that format, so one result cannot wipe the other ladder. A player item that only has the older top-level `elo`, `wins`, and `losses` is read as a doubles rating. The ladders are a query by workspace.
 
-Game phases are a discriminated union, and `format` is `doubles` or `singles`. An open game has no pairings. An active 2v2 has four players and three unpicked games. An active 1v1 has two players and one unpicked game. A completed game has its winners and a rating snapshot for that format. A cancelled game records who cancelled it. A stored game with no format is read as a 2v2.
+Game phases are a discriminated union on `phase` and `format`. `format` is `singles` for a 1v1, `match` for a single 2v2, and `doubles` for a 2v2 long game. A 2v2 in setup has format `pending` and no players. An open random-teams 2v2 has format `random`, and Start stores the drawn teams as a `match`. An open game has no pairings. An active 2v2 long game has four players and three unpicked games. An active single 2v2 has four players and one unpicked game. An active 1v1 has two players and one unpicked game. A completed game has its winners and a rating snapshot for that format. A cancelled game records who cancelled it. A stored game with no format is read as a 2v2 long game.
 
 ## Repository
 
@@ -180,8 +204,9 @@ Action ids, stable for tests:
 
 | action_id | value |
 | --- | --- |
-| `game_join`, `game_leave`, `game_cancel`, `game_start`, `game_finish`, `game_save` | `gameId` |
-| `game_pick` | `gameId`, round index (`0` for 1v1, `0..2` for 2v2), `home` or `away` |
+| `game_mode_random`, `game_mode_teams`, `game_mode_long` | `gameId` |
+| `game_join`, `game_join_a`, `game_join_b`, `game_leave`, `game_cancel`, `game_start`, `game_finish`, `game_save` | `gameId` |
+| `game_pick_home`, `game_pick_away` | `gameId`, round index (`0` for a single game, `0..2` for a 2v2 long game), `home` or `away` |
 
 ## Deploy
 
@@ -245,7 +270,7 @@ CloudFormation asks for confirmation, then deletes the Lambda, the function URL,
 | Auth | API key on the request URL, Slack's signing secret, and a bot token used only to post mention replies |
 | Secrets | Environment variables only |
 | Ratings | Separate 1v1 and 2v2 ladders. Average team rating, K=32, integer, applied per game in order |
-| Pairings | A 2v2 is Team A vs Team B. A 2v2 long game rotates partners from join order. A 1v1 is one game |
+| Pairings | A random-teams 2v2 draws its teams at start. A chosen-teams 2v2 is Team A vs Team B. A 2v2 long game rotates partners from join order. A 1v1 is one game |
 | Draws, editing a finished game | Out of scope |
 | CI | None. Deploy from a laptop with shell credentials. |
 
