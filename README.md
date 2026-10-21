@@ -113,7 +113,7 @@ Each person partners with each of the other three once.
 
 Only the players in the game can finish or cancel. Cancel posts `Cancelled by @name` and removes the buttons.
 
-**Reporting.** The message lists each game. Each game has two buttons, one per side. A chosen side stays marked, and another player may change it until save. Save appears once every game has a winner. There is no draw.
+**Reporting.** The message lists each game. Each game has two buttons, one per side, and in a 2v2 long game each pair sits under its game number (`Game 1`). A chosen side stays marked, and another player may change it until save. Save appears once every game has a winner. There is no draw.
 
 **Completed.** The message lists who won each game and each player's rating change on that ladder (`1000 → 1016 (+16)`) plus that ladder's wins and losses. No buttons. Saving again does not apply ratings twice; the handler shows the completed message.
 

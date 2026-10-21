@@ -31,6 +31,12 @@ function buttonLabels(blocks: Block[]): string[] {
   )
 }
 
+function buttonsUnder(blocks: Block[], heading: string): string[] {
+  const index = blocks.findIndex((block) => block.type === "section" && block.text.text === heading)
+  const next = index >= 0 ? blocks[index + 1] : undefined
+  return next?.type === "actions" ? next.elements.map((element) => element.text.text) : []
+}
+
 function textOf(blocks: Block[]): string {
   return blocks
     .filter((block) => block.type === "section")
@@ -211,6 +217,30 @@ describe("renderGame", () => {
     }
     expect(actionIds(renderGame(ready).blocks)).toContain("game_save")
     expect(textOf(renderGame(ready).blocks)).toContain("*<@A> + <@B>*")
+  })
+
+  it("heads each game's buttons with its number in a long game and not in a single game", () => {
+    const players = requireFour(roster)
+    const reporting = {
+      id: "g1",
+      teamId: "T1",
+      channelId: "C1",
+      createdBy: "Z",
+      phase: "reporting" as const,
+      players,
+    }
+    const long = renderGame({ ...reporting, format: "doubles", rounds: pairings(players) })
+    expect(buttonsUnder(long.blocks, "*Game 1*")).toEqual(["Ada & Ben", "Cia & Dan"])
+    expect(buttonsUnder(long.blocks, "*Game 2*")).toEqual(["Ada & Cia", "Ben & Dan"])
+    expect(buttonsUnder(long.blocks, "*Game 3*")).toEqual(["Ada & Dan", "Ben & Cia"])
+
+    const single = renderGame({
+      ...reporting,
+      format: "match",
+      rounds: [{ home: [players[0], players[1]], away: [players[2], players[3]], winner: null }],
+    })
+    expect(textOf(single.blocks)).not.toContain("*Game 1*")
+    expect(buttonLabels(single.blocks)).toEqual(["Ada & Ben", "Cia & Dan"])
   })
 
   it("names who cancelled and removes the buttons", () => {
