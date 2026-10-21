@@ -154,6 +154,7 @@ function renderReporting(game: ReportingGame): SlackView {
   const blocks: Block[] = [section(`*Who won?*\n${lines}`)]
   game.rounds.forEach((round, index) => {
     const roundIndex = asRoundIndex(index)
+    if (game.rounds.length > 1) blocks.push(section(`*Game ${index + 1}*`))
     blocks.push(
       actions([
         sideButton(game.id, roundIndex, "home", round),
