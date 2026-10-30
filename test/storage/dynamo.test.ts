@@ -6,6 +6,8 @@ import { requireFour } from "../../src/domain/types"
 import { DynamoRepository, type DocumentSender } from "../../src/storage/dynamo"
 import { player } from "../helpers"
 
+const playedAt = Date.UTC(2026, 9, 1)
+
 describe("DynamoRepository", () => {
   it("stores a 2v2 setup and replaces it with the chosen mode", async () => {
     const repo = new DynamoRepository("Games", "Players", new FakeDocuments())
@@ -61,10 +63,11 @@ describe("DynamoRepository", () => {
     expect(await repo.compareAndSwap(1, reporting)).toBe("ok")
     const rated = apply(reporting, { type: "save", userId: "A", ratings: new Map() })
     if (rated.kind !== "complete") throw new Error("expected complete")
-    expect(await repo.complete(2, rated.game, rated.standings)).toBe("ok")
-    expect(await repo.complete(2, rated.game, rated.standings)).toBe("conflict")
+    expect(await repo.complete(2, rated.game, rated.standings, playedAt)).toBe("ok")
+    expect(await repo.complete(2, rated.game, rated.standings, playedAt)).toBe("conflict")
     const ladders = await repo.listLadders("T1")
     expect(ladders.doubles.find((standing) => standing.userId === "A")?.elo).toBe(1048)
+    expect(ladders.doubles.find((standing) => standing.userId === "A")?.lastPlayedAt).toBe(playedAt)
     expect(ladders.singles).toEqual([])
     expect(await repo.getStandings("T1", ["A", "missing"], "doubles")).toHaveLength(1)
     expect(await repo.getStandings("T1", ["A"], "singles")).toHaveLength(0)
@@ -91,7 +94,7 @@ describe("DynamoRepository", () => {
     expect(await repo.compareAndSwap(1, singles)).toBe("ok")
     const singlesRated = apply(singles, { type: "save", userId: "A", ratings: new Map() })
     if (singlesRated.kind !== "complete") throw new Error("expected complete")
-    expect(await repo.complete(2, singlesRated.game, singlesRated.standings)).toBe("ok")
+    expect(await repo.complete(2, singlesRated.game, singlesRated.standings, playedAt)).toBe("ok")
     const after = await repo.listLadders("T1")
     expect(after.doubles.find((standing) => standing.userId === "A")?.elo).toBe(1048)
     expect(after.singles.find((standing) => standing.userId === "A")?.elo).toBe(1016)

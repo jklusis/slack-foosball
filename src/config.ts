@@ -1,9 +1,12 @@
+export const defaultInactiveDays = 30
+
 export type Config = {
   apiKey: string
   signingSecret: string
   botToken: string
   gamesTable: string
   playersTable: string
+  inactiveDays: number
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv): Config {
@@ -17,5 +20,15 @@ export function loadConfig(env: NodeJS.ProcessEnv): Config {
       "FOOSBALL_API_KEY, SLACK_SIGNING_SECRET, SLACK_BOT_TOKEN, GAMES_TABLE, and PLAYERS_TABLE are required",
     )
   }
-  return { apiKey, signingSecret, botToken, gamesTable, playersTable }
+  const inactiveDays = readInactiveDays(env.FOOSBALL_INACTIVE_DAYS)
+  return { apiKey, signingSecret, botToken, gamesTable, playersTable, inactiveDays }
+}
+
+export function readInactiveDays(value: string | undefined): number {
+  if (value === undefined || value.trim() === "") return defaultInactiveDays
+  const days = Number(value.trim())
+  if (!/^\d+$/.test(value.trim()) || days < 1) {
+    throw new Error("FOOSBALL_INACTIVE_DAYS must be a whole number of days, at least 1")
+  }
+  return days
 }

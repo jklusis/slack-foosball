@@ -224,7 +224,7 @@ describe("handle", () => {
     if (!stored || stored.game.phase !== "reporting") throw new Error("expected reporting")
     const rated = apply(stored.game, { type: "save", userId: "A", ratings: new Map() })
     if (rated.kind !== "complete") throw new Error("expected complete")
-    await repo.complete(stored.version, rated.game, rated.standings)
+    await repo.complete(stored.version, rated.game, rated.standings, nowMs)
 
     const { deps: ladderDeps, messages } = harness(repo)
     const response = await handle(event(mention("top")), ladderDeps)
@@ -236,6 +236,44 @@ describe("handle", () => {
     expect(text.indexOf("*1v1*")).toBeGreaterThan(text.indexOf("Ada"))
     expect(text).not.toContain("<@")
     expect(text).toContain("1048")
+  })
+
+  it("leaves players off top once their last game is older than the inactivity limit", async () => {
+    const repo = new MemoryRepository()
+    const ada = user("A", "Ada")
+    const ben = user("B", "Ben")
+    await repo.create({
+      id: "game-1",
+      teamId: "T1",
+      channelId: "C1",
+      createdBy: "U9",
+      phase: "open",
+      format: "singles",
+      players: [],
+    })
+    await repo.compareAndSwap(1, {
+      id: "game-1",
+      teamId: "T1",
+      channelId: "C1",
+      createdBy: "U9",
+      phase: "reporting",
+      format: "singles",
+      players: [ada, ben],
+      rounds: [{ home: [ada], away: [ben], winner: "home" }],
+    })
+    const stored = await repo.get("T1", "game-1")
+    if (!stored || stored.game.phase !== "reporting") throw new Error("expected reporting")
+    const rated = apply(stored.game, { type: "save", userId: "A", ratings: new Map() })
+    if (rated.kind !== "complete") throw new Error("expected complete")
+    await repo.complete(stored.version, rated.game, rated.standings, nowMs - 31 * 24 * 60 * 60 * 1000)
+
+    const { deps, messages } = harness(repo)
+    await handle(event(mention("top")), deps)
+    const blocks = messages[0]?.blocks as Array<{ text?: { text: string } }>
+    const text = blocks.map((block) => block.text?.text ?? "").join("\n")
+    expect(text).not.toContain("Ada")
+    expect(text).toContain("*1v1*\nNo active players.")
+    expect(text).toContain("Players who have not played for 30 days are hidden.")
   })
 
   it("updates a finished game through the bot message, not the response url", async () => {
@@ -306,7 +344,7 @@ function harness(repo: GameRepository = new MemoryRepository()) {
   const updates: Array<{ channelId: string; messageTs: string; text: string; blocks: unknown }> = []
   const notes: Array<{ channelId: string; userId: string; text: string }> = []
   const deps = {
-    config: { apiKey, signingSecret },
+    config: { apiKey, signingSecret, inactiveDays: 30 },
     repo,
     poster: {
       async post(url: string, body: Record<string, unknown>) {

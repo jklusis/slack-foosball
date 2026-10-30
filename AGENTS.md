@@ -73,7 +73,7 @@ Use Vitest, with no AWS account and no network. Test behavior a player would not
 ## AWS and Slack
 
 - One Lambda, Node.js 26, Function URL auth `NONE`, payload format 2.0. The handler rejects callers who lack the key.
-- Read `FOOSBALL_API_KEY`, `SLACK_SIGNING_SECRET`, and `SLACK_BOT_TOKEN` from the environment. Fail startup if any is missing. The bot token is only for `chat.postMessage`, `chat.update`, and `chat.postEphemeral`.
+- Read `FOOSBALL_API_KEY`, `SLACK_SIGNING_SECRET`, and `SLACK_BOT_TOKEN` from the environment. Fail startup if any is missing. `FOOSBALL_INACTIVE_DAYS` is optional and defaults to 30 in `src/config.ts`. The bot token is only for `chat.postMessage`, `chat.update`, and `chat.postEphemeral`.
 - Generating a new API key on every deploy breaks the URL already pasted into Slack. Reuse `FOOSBALL_API_KEY` when it is set.
 - Tables stay on-demand. Destroying the stack deletes them.
 - Tag every stack resource `ManagedBy=foosball-aws-cdk`. Bootstrap uses the same tag.

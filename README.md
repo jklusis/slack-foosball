@@ -132,7 +132,7 @@ delta = round(K * (score - expected))
 
 `score` is 1 for the winning side and 0 for the losing side. Winners receive `+delta`, losers `-delta`. Ratings are integers. With a shared K, an even game (everyone at 1000) moves winners to 1016 and losers to 984.
 
-`@Foosball top` lists both ladders by name, without mentioning anyone. Each one sorts by rating, then wins, then display name. A player with only one format appears only on that list.
+`@Foosball top` lists both ladders by name, without mentioning anyone. Each one sorts by rating, then wins, then display name. A player with only one format appears only on that list. A player whose last saved game on a ladder is 30 or more days old is left off that ladder until they play it again; the rating is kept. A line under the ladders says how many days that is. Ratings saved before game times were recorded have no time and stay off until their next game. Set `FOOSBALL_INACTIVE_DAYS` (a whole number, at least 1) before deploying to change the 30.
 
 ```
 2v2
@@ -141,9 +141,11 @@ delta = round(K * (score - expected))
 
 1v1
 1. @c — 1016 · 1W 0L
+
+Players who have not played for 30 days are hidden.
 ```
 
-When nobody is rated in either format, the message says that a first game starts everyone at 1000. A format that has no rated players says so under its own heading.
+A ladder with no active players says so under its own heading.
 
 ## Who can press what
 
@@ -179,7 +181,7 @@ Two on-demand DynamoDB tables. Deploying again keeps the games and ratings. `mak
 
 **Games.** Partition key `teamId`, sort key `gameId`. Holds phase, ordered players, round winners, channel, and the rating snapshot once completed. Button values carry `gameId`. Writes that change membership or phase use a condition so two clicks cannot drop a player or apply ratings twice.
 
-**Players.** Partition key `teamId`, sort key `userId`. Holds `displayName` plus a doubles rating and a singles rating. Saving a game updates only that format, so one result cannot wipe the other ladder. A player item that only has the older top-level `elo`, `wins`, and `losses` is read as a doubles rating. The ladders are a query by workspace.
+**Players.** Partition key `teamId`, sort key `userId`. Holds `displayName` plus a doubles rating and a singles rating. Each rating carries `lastPlayedAt`, the epoch milliseconds when a game on that ladder was last saved. Saving a game updates only that format, so one result cannot wipe the other ladder. A player item that only has the older top-level `elo`, `wins`, and `losses` is read as a doubles rating. The ladders are a query by workspace.
 
 Game phases are a discriminated union on `phase` and `format`. `format` is `singles` for a 1v1, `match` for a single 2v2, and `doubles` for a 2v2 long game. A 2v2 in setup has format `2v2` and no players. An open random-teams 2v2 has format `random`, and Start stores the drawn teams as a `match`. An open game has no pairings. An active 2v2 long game has four players and three unpicked games. An active single 2v2 has four players and one unpicked game. An active 1v1 has two players and one unpicked game. A completed game has its winners and a rating snapshot for that format. A cancelled game records who cancelled it. A stored game with no format is read as a 2v2 long game.
 
@@ -235,6 +237,8 @@ Deploy prints `SlackRequestUrl`. Copy that whole value. The API key is the `?key
 9. Mention `@Foosball ping`. The channel should get `pong!`. Then `@Foosball 1v1` or `@Foosball 2v2`.
 
 Until those two URLs are saved, mentions and buttons do not reach the Lambda. Do not commit the key file, the signing secret, or the bot token. The manifest in git keeps the placeholder URL.
+
+`FOOSBALL_INACTIVE_DAYS` is optional. When it is set at deploy, the stack passes it to the Lambda; otherwise the app uses 30. A value that is not a whole number of at least 1 fails the deploy.
 
 Stack outputs are `FunctionUrl`, `ApiKey`, and `SlackRequestUrl`. The key living in a CloudFormation output is acceptable for this app. The bot token stays in the Lambda environment and is not an output.
 

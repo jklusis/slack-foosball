@@ -159,4 +159,16 @@ describe("game codec", () => {
       doubles: { elo: 1048, wins: 3, losses: 0 },
     })
   })
+
+  it("reads the last game time per ladder and leaves it off ratings stored before it existed", () => {
+    const record = playerFromItem({
+      teamId: "T1",
+      userId: "A",
+      displayName: "Ada",
+      doubles: { elo: 1016, wins: 1, losses: 0, lastPlayedAt: 1_790_000_000_000 },
+      singles: { elo: 984, wins: 0, losses: 1 },
+    })
+    expect(record.doubles?.lastPlayedAt).toBe(1_790_000_000_000)
+    expect(record.singles).not.toHaveProperty("lastPlayedAt")
+  })
 })

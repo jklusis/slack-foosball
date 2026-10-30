@@ -18,6 +18,22 @@ describe("loadConfig", () => {
       botToken: "xoxb-test",
       gamesTable: "games",
       playersTable: "players",
+      inactiveDays: 30,
     })
+  })
+
+  it("reads the inactivity limit and rejects a value that is not a positive whole number", () => {
+    const base = {
+      FOOSBALL_API_KEY: "key",
+      SLACK_SIGNING_SECRET: "secret",
+      SLACK_BOT_TOKEN: "xoxb-test",
+      GAMES_TABLE: "games",
+      PLAYERS_TABLE: "players",
+    }
+    expect(loadConfig({ ...base, FOOSBALL_INACTIVE_DAYS: "14" }).inactiveDays).toBe(14)
+    expect(loadConfig({ ...base, FOOSBALL_INACTIVE_DAYS: "" }).inactiveDays).toBe(30)
+    for (const bad of ["0", "-3", "2.5", "1e2", "a week"]) {
+      expect(() => loadConfig({ ...base, FOOSBALL_INACTIVE_DAYS: bad })).toThrow(/FOOSBALL_INACTIVE_DAYS/)
+    }
   })
 })

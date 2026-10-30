@@ -353,9 +353,9 @@ describe("renderGame", () => {
 
 describe("renderLadder", () => {
   it("explains an empty ladder and ranks each format on its own", () => {
-    const empty = textOf(renderLadder({ doubles: [], singles: [] }).blocks)
-    expect(empty).toContain("*2v2*\nNo rated players yet.")
-    expect(empty).toContain("*1v1*\nNo rated players yet.")
+    const empty = textOf(renderLadder({ doubles: [], singles: [] }, 30).blocks)
+    expect(empty).toContain("*2v2*\nNo active players.")
+    expect(empty).toContain("*1v1*\nNo active players.")
     expect(empty).not.toContain("name, ELO, wins, losses")
     const view = renderLadder({
       doubles: [
@@ -363,7 +363,7 @@ describe("renderLadder", () => {
         { userId: "A", displayName: "Ada", elo: 1048, wins: 3, losses: 0 },
       ],
       singles: [{ userId: "C", displayName: "Cia", elo: 1016, wins: 1, losses: 0 }],
-    })
+    }, 30)
     const text = textOf(view.blocks)
     expect(text.indexOf("*2v2*")).toBeLessThan(text.indexOf("name, ELO, wins, losses"))
     expect(text.indexOf("name, ELO, wins, losses")).toBeLessThan(text.indexOf("Ada"))
@@ -371,11 +371,18 @@ describe("renderLadder", () => {
     const onlyDoubles = renderLadder({
       doubles: [{ userId: "A", displayName: "Ada", elo: 1048, wins: 3, losses: 0 }],
       singles: [],
-    })
-    expect(textOf(onlyDoubles.blocks)).toContain("*1v1*\nNo rated players yet.")
+    }, 30)
+    expect(textOf(onlyDoubles.blocks)).toContain("*1v1*\nNo active players.")
     expect(text.indexOf("Ada")).toBeLessThan(text.indexOf("Ben"))
     expect(text.indexOf("*1v1*")).toBeGreaterThan(text.indexOf("Ben"))
     expect(text.indexOf("Cia")).toBeGreaterThan(text.indexOf("*1v1*"))
     expect(text).toContain("1048 · 3W 0L")
+  })
+
+  it("says how long a player can go without a game before they are hidden", () => {
+    expect(textOf(renderLadder({ doubles: [], singles: [] }, 30).blocks)).toContain(
+      "Players who have not played for 30 days are hidden.",
+    )
+    expect(textOf(renderLadder({ doubles: [], singles: [] }, 1).blocks)).toContain("for 1 day are hidden")
   })
 })
