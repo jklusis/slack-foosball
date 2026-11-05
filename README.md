@@ -132,15 +132,17 @@ delta = round(K * (score - expected))
 
 `score` is 1 for the winning side and 0 for the losing side. Winners receive `+delta`, losers `-delta`. Ratings are integers. With a shared K, an even game (everyone at 1000) moves winners to 1016 and losers to 984.
 
-`@Foosball top` lists both ladders by name, without mentioning anyone. Each one sorts by rating, then wins, then display name. A player with only one format appears only on that list. A player whose last saved game on a ladder is 30 or more days old is left off that ladder until they play it again; the rating is kept. A line under the ladders says how many days that is. Ratings saved before game times were recorded get the deploy time as their last game, so everyone already rated stays on for one full window after this ships. Set `FOOSBALL_INACTIVE_DAYS` (a whole number, at least 1) before deploying to change the 30.
+`@Foosball top` lists both ladders by name, without mentioning anyone. Each line shows the rating, the games played on that ladder (wins plus losses; a 2v2 long game counts as three), and the wins and losses. Each ladder sorts by rating, then wins, then display name. A player with only one format appears only on that list. A player whose last saved game on a ladder is 30 or more days old is left off that ladder until they play it again; the rating is kept. A line under the ladders says how many days that is. Ratings saved before game times were recorded get the deploy time as their last game, so everyone already rated stays on for one full window after this ships. Set `FOOSBALL_INACTIVE_DAYS` (a whole number, at least 1) before deploying to change the 30.
 
 ```
 2v2
-1. @a — 1042 · 6W 2L
-2. @b — 1008 · 4W 4L
+name, ELO, games, wins, losses
+1. a — 1042 · 8 games · 6W 2L
+2. b — 1008 · 8 games · 4W 4L
 
 1v1
-1. @c — 1016 · 1W 0L
+name, ELO, games, wins, losses
+1. c — 1016 · 1 game · 1W 0L
 
 Players who have not played for 30 days are hidden.
 ```

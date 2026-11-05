@@ -356,7 +356,7 @@ describe("renderLadder", () => {
     const empty = textOf(renderLadder({ doubles: [], singles: [] }, 30).blocks)
     expect(empty).toContain("*2v2*\nNo active players.")
     expect(empty).toContain("*1v1*\nNo active players.")
-    expect(empty).not.toContain("name, ELO, wins, losses")
+    expect(empty).not.toContain("name, ELO, games, wins, losses")
     const view = renderLadder({
       doubles: [
         { userId: "B", displayName: "Ben", elo: 984, wins: 1, losses: 2 },
@@ -365,8 +365,8 @@ describe("renderLadder", () => {
       singles: [{ userId: "C", displayName: "Cia", elo: 1016, wins: 1, losses: 0 }],
     }, 30)
     const text = textOf(view.blocks)
-    expect(text.indexOf("*2v2*")).toBeLessThan(text.indexOf("name, ELO, wins, losses"))
-    expect(text.indexOf("name, ELO, wins, losses")).toBeLessThan(text.indexOf("Ada"))
+    expect(text.indexOf("*2v2*")).toBeLessThan(text.indexOf("name, ELO, games, wins, losses"))
+    expect(text.indexOf("name, ELO, games, wins, losses")).toBeLessThan(text.indexOf("Ada"))
     expect(text).not.toContain("<@")
     const onlyDoubles = renderLadder({
       doubles: [{ userId: "A", displayName: "Ada", elo: 1048, wins: 3, losses: 0 }],
@@ -376,7 +376,9 @@ describe("renderLadder", () => {
     expect(text.indexOf("Ada")).toBeLessThan(text.indexOf("Ben"))
     expect(text.indexOf("*1v1*")).toBeGreaterThan(text.indexOf("Ben"))
     expect(text.indexOf("Cia")).toBeGreaterThan(text.indexOf("*1v1*"))
-    expect(text).toContain("1048 · 3W 0L")
+    expect(text).toContain("Ada — 1048 · 3 games · 3W 0L")
+    expect(text).toContain("Ben — 984 · 3 games · 1W 2L")
+    expect(text).toContain("Cia — 1016 · 1 game · 1W 0L")
   })
 
   it("says how long a player can go without a game before they are hidden", () => {

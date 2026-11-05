@@ -233,9 +233,9 @@ function ladderSection(title: string, standings: readonly PlayerStanding[]): str
   if (ranked.length === 0) return `*${title}*\n${copy.emptyFormat}`
   const lines = ranked.map(
     (standing, index) =>
-      `${index + 1}. ${standing.displayName} — ${standing.elo} · ${standing.wins}W ${standing.losses}L`,
+      `${index + 1}. ${standing.displayName} — ${standing.elo} · ${copy.gamesPlayed(standing.wins + standing.losses)} · ${standing.wins}W ${standing.losses}L`,
   )
-  return `*${title}*\nname, ELO, wins, losses\n${lines.join("\n")}`
+  return `*${title}*\nname, ELO, games, wins, losses\n${lines.join("\n")}`
 }
 
 function listLines(lines: string[]): string {
