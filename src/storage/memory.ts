@@ -1,4 +1,12 @@
-import type { CompletedGame, Game, Ladder, LadderFormat, NewGame, PlayerStanding, Rating } from "../domain/types"
+import type {
+  CompletedGame,
+  Game,
+  Ladder,
+  LadderFormat,
+  LadderRating,
+  NewGame,
+  PlayerStanding,
+} from "../domain/types"
 import { ladderFormat } from "../domain/types"
 import { ladderFromPlayers, standingOf, type PlayerRecord } from "./codec"
 import type { GameRepository, StoredGame } from "./repository"
@@ -34,6 +42,7 @@ export class MemoryRepository implements GameRepository {
     expectedVersion: number,
     game: CompletedGame,
     standings: readonly PlayerStanding[],
+    playedAt: number,
   ): Promise<"ok" | "conflict"> {
     const key = gameKey(game.teamId, game.id)
     const current = this.games.get(key)
@@ -41,7 +50,7 @@ export class MemoryRepository implements GameRepository {
       return "conflict"
     }
     this.games.set(key, { version: expectedVersion + 1, game: structuredClone(game) })
-    for (const standing of standings) this.writeStanding(game.teamId, ladderFormat(game.format), standing)
+    for (const standing of standings) this.writeStanding(game.teamId, ladderFormat(game.format), standing, playedAt)
     return "ok"
   }
 
@@ -65,10 +74,20 @@ export class MemoryRepository implements GameRepository {
     return ladderFromPlayers(records)
   }
 
-  private writeStanding(teamId: string, format: LadderFormat, standing: PlayerStanding): void {
+  private writeStanding(
+    teamId: string,
+    format: LadderFormat,
+    standing: PlayerStanding,
+    playedAt: number,
+  ): void {
     const key = playerKey(teamId, standing.userId)
     const current = this.players.get(key)
-    const rating: Rating = { elo: standing.elo, wins: standing.wins, losses: standing.losses }
+    const rating: LadderRating = {
+      elo: standing.elo,
+      wins: standing.wins,
+      losses: standing.losses,
+      lastPlayedAt: playedAt,
+    }
     const next: StoredPlayer = {
       teamId,
       userId: standing.userId,

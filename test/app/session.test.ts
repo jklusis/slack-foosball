@@ -178,6 +178,32 @@ describe("handleAction", () => {
     expect(standings.singles).toEqual([])
   })
 
+  it("stamps the save time on the ladder so top can tell who is active", async () => {
+    const repo = new MemoryRepository()
+    const players = requireFour([ada, ben, cia, dan])
+    const doubles: ReportingGame = {
+      id: "doubles",
+      teamId: "T1",
+      channelId: "C1",
+      createdBy: "Z",
+      phase: "reporting",
+      format: "doubles",
+      players,
+      rounds: pairings(players).map((round) => ({ ...round, winner: "home" as const })) as ThreeRounds,
+    }
+    await repo.create({ ...openGame(), id: "doubles" })
+    expect(await repo.compareAndSwap(1, doubles)).toBe("ok")
+    const savedAt = Date.UTC(2026, 9, 30, 12)
+    await handleAction(
+      repo,
+      { teamId: "T1", gameId: "doubles", actor: ada, action: { type: "save" } },
+      Math.random,
+      () => savedAt,
+    )
+    const ladder = await repo.listLadders("T1")
+    expect(ladder.doubles.map((standing) => standing.lastPlayedAt)).toEqual([savedAt, savedAt, savedAt, savedAt])
+  })
+
   it("rates a 1v1 from 1000 even when the players already have a 2v2 rating", async () => {
     const repo = new MemoryRepository()
     const players = requireFour([ada, ben, cia, dan])
@@ -238,7 +264,7 @@ describe("handleAction", () => {
         }
         return inner.compareAndSwap(version, game)
       },
-      complete: (version, game, standings) => inner.complete(version, game, standings),
+      complete: (version, game, standings, playedAt) => inner.complete(version, game, standings, playedAt),
       getStandings: (teamId, userIds, format) => inner.getStandings(teamId, userIds, format),
       listLadders: (teamId) => inner.listLadders(teamId),
     }
@@ -261,7 +287,7 @@ describe("handleAction", () => {
       create: (game) => inner.create(game),
       get: (teamId, gameId) => inner.get(teamId, gameId),
       compareAndSwap: async () => "conflict",
-      complete: (version, game, standings) => inner.complete(version, game, standings),
+      complete: (version, game, standings, playedAt) => inner.complete(version, game, standings, playedAt),
       getStandings: (teamId, userIds, format) => inner.getStandings(teamId, userIds, format),
       listLadders: (teamId) => inner.listLadders(teamId),
     }

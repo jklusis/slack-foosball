@@ -44,8 +44,23 @@ describe("FoosballStack", () => {
         },
       },
     })
+    const [controller] = Object.values(template.findResources("AWS::Lambda::Function"))
+    expect(controller?.Properties.Environment.Variables).not.toHaveProperty("FOOSBALL_INACTIVE_DAYS")
     expect(Object.keys(template.toJSON().Outputs ?? {})).toEqual(
       expect.arrayContaining(["FunctionUrl", "ApiKey", "SlackRequestUrl"]),
     )
+  })
+
+  it("passes the inactivity limit to the function only when it is set", () => {
+    const app = new App({ outdir: mkdtempSync(join(tmpdir(), "foosball-cdk-")) })
+    const stack = new FoosballStack(app, "Foosball", {
+      apiKey: "test-api-key",
+      signingSecret: "test-signing-secret",
+      botToken: "xoxb-test",
+      inactiveDays: 14,
+    })
+    Template.fromStack(stack).hasResourceProperties("AWS::Lambda::Function", {
+      Environment: { Variables: { FOOSBALL_INACTIVE_DAYS: "14" } },
+    })
   })
 })

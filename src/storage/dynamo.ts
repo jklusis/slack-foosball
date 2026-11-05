@@ -77,6 +77,7 @@ export class DynamoRepository implements GameRepository {
     expectedVersion: number,
     game: CompletedGame,
     standings: readonly PlayerStanding[],
+    playedAt: number,
   ): Promise<"ok" | "conflict"> {
     try {
       await this.client.send(
@@ -93,7 +94,7 @@ export class DynamoRepository implements GameRepository {
             ...standings.map((standing) => ({
               Update: {
                 TableName: this.playersTable,
-                ...playerUpdate(game.teamId, ladderFormat(game.format), standing),
+                ...playerUpdate(game.teamId, ladderFormat(game.format), standing, playedAt),
               },
             })),
           ],

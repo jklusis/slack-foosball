@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto"
 import { handleAction } from "./app/session"
 import { newGame } from "./domain/game"
+import { activeLadder } from "./domain/ladder"
 import { Reason } from "./domain/types"
 import { rejectionText } from "./slack/copy"
 import { parseSlackBody, type ParsedSlack } from "./slack/parse"
@@ -13,6 +14,7 @@ import type { GameRepository } from "./storage/repository"
 export type HandlerConfig = {
   apiKey: string
   signingSecret: string
+  inactiveDays: number
 }
 
 export type Deps = {
@@ -73,8 +75,8 @@ async function dispatch(parsed: ParsedSlack, deps: Deps): Promise<HttpResult> {
     return note(deps, parsed, rejectionText(Reason.wrongPhase))
   }
   if (parsed.kind === "top") {
-    const ladder = await deps.repo.listLadders(parsed.teamId)
-    return say(deps.channel, parsed.channelId, renderLadder(ladder))
+    const ladder = activeLadder(await deps.repo.listLadders(parsed.teamId), deps.now(), deps.config.inactiveDays)
+    return say(deps.channel, parsed.channelId, renderLadder(ladder, deps.config.inactiveDays))
   }
   if (parsed.kind === "open") {
     const game = newGame(
@@ -90,7 +92,7 @@ async function dispatch(parsed: ParsedSlack, deps: Deps): Promise<HttpResult> {
     return say(deps.channel, parsed.channelId, renderGame(game))
   }
 
-  const outcome = await handleAction(deps.repo, parsed, deps.random)
+  const outcome = await handleAction(deps.repo, parsed, deps.random, deps.now)
   if (outcome.type === "ephemeral") return note(deps, parsed, rejectionText(outcome.reason))
   return revise(deps, parsed, renderGame(outcome.game))
 }

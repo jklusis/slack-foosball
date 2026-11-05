@@ -9,6 +9,7 @@ import type {
   FourPlayers,
   Game,
   Ladder,
+  LadderRating,
   Player,
   PlayerStanding,
   Rating,
@@ -28,8 +29,8 @@ type Item = Record<string, unknown>
 export type PlayerRecord = {
   userId: string
   displayName: string
-  doubles?: Rating
-  singles?: Rating
+  doubles?: LadderRating
+  singles?: LadderRating
 }
 
 export function gameToItem(stored: StoredGame): Item {
@@ -107,25 +108,71 @@ export function standingOf(record: PlayerRecord, format: LadderFormat): PlayerSt
   return standing(record, rating)
 }
 
-export function playerUpdate(teamId: string, format: LadderFormat, standing: PlayerStanding) {
+export function playerUpdate(
+  teamId: string,
+  format: LadderFormat,
+  standing: PlayerStanding,
+  playedAt: number,
+) {
   return {
     Key: { teamId, userId: standing.userId },
     UpdateExpression: "SET displayName = :displayName, #format = :rating",
     ExpressionAttributeNames: { "#format": format },
     ExpressionAttributeValues: {
       ":displayName": standing.displayName,
-      ":rating": { elo: standing.elo, wins: standing.wins, losses: standing.losses },
+      ":rating": {
+        elo: standing.elo,
+        wins: standing.wins,
+        losses: standing.losses,
+        lastPlayedAt: playedAt,
+      },
     },
   }
 }
 
-function standing(record: PlayerRecord, rating: Rating): PlayerStanding {
+export type PlayerBackfill = {
+  Key: { teamId: string; userId: string }
+  UpdateExpression: string
+  ConditionExpression: string
+  ExpressionAttributeValues: { ":playedAt": number }
+}
+
+// A rating saved before lastPlayedAt existed gets the deploy time, so top keeps it for one full inactivity window.
+// The condition makes a rerun, or a game saved meanwhile, leave the stored time alone.
+export function lastPlayedBackfills(item: Item, playedAt: number): PlayerBackfill[] {
+  const teamId = readString(item.teamId)
+  const userId = readString(item.userId)
+  if (!teamId || !userId) return []
+  const backfill = (path: string, ratingExists: string): PlayerBackfill => ({
+    Key: { teamId, userId },
+    UpdateExpression: `SET ${path} = :playedAt`,
+    ConditionExpression: `${ratingExists} AND attribute_not_exists(${path})`,
+    ExpressionAttributeValues: { ":playedAt": playedAt },
+  })
+  const updates: PlayerBackfill[] = []
+  const doubles = readRating(item.doubles)
+  const legacyDoubles = doubles ? undefined : readRating(item)
+  if (doubles && doubles.lastPlayedAt === undefined) {
+    updates.push(backfill("doubles.lastPlayedAt", "attribute_exists(doubles)"))
+  }
+  if (legacyDoubles && legacyDoubles.lastPlayedAt === undefined) {
+    updates.push(backfill("lastPlayedAt", "attribute_not_exists(doubles)"))
+  }
+  const singles = readRating(item.singles)
+  if (singles && singles.lastPlayedAt === undefined) {
+    updates.push(backfill("singles.lastPlayedAt", "attribute_exists(singles)"))
+  }
+  return updates
+}
+
+function standing(record: PlayerRecord, rating: LadderRating): PlayerStanding {
   return {
     userId: record.userId,
     displayName: record.displayName,
     elo: rating.elo,
     wins: rating.wins,
     losses: rating.losses,
+    ...(rating.lastPlayedAt !== undefined ? { lastPlayedAt: rating.lastPlayedAt } : {}),
   }
 }
 
@@ -374,13 +421,14 @@ function readFormat(value: unknown): GameFormat | undefined {
   return undefined
 }
 
-function readRating(value: unknown): Rating | undefined {
+function readRating(value: unknown): LadderRating | undefined {
   if (!isRecord(value)) return undefined
   const elo = readNumber(value.elo)
   const wins = readNumber(value.wins)
   const losses = readNumber(value.losses)
   if (elo === undefined || wins === undefined || losses === undefined) return undefined
-  return { elo, wins, losses }
+  const lastPlayedAt = readNumber(value.lastPlayedAt)
+  return { elo, wins, losses, ...(lastPlayedAt !== undefined ? { lastPlayedAt } : {}) }
 }
 
 function readPlayers(value: unknown): Player[] | undefined {

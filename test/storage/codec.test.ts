@@ -12,7 +12,7 @@ import type {
   ThreeRounds,
 } from "../../src/domain/types"
 import { requireFour } from "../../src/domain/types"
-import { gameFromItem, gameToItem, playerFromItem } from "../../src/storage/codec"
+import { gameFromItem, gameToItem, lastPlayedBackfills, playerFromItem } from "../../src/storage/codec"
 import { player } from "../helpers"
 
 const players = requireFour([player("A", "Ada"), player("B", "Ben"), player("C", "Cia"), player("D", "Dan")])
@@ -158,5 +158,48 @@ describe("game codec", () => {
       displayName: "Ada",
       doubles: { elo: 1048, wins: 3, losses: 0 },
     })
+  })
+
+  it("reads the last game time per ladder and leaves it off ratings stored before it existed", () => {
+    const record = playerFromItem({
+      teamId: "T1",
+      userId: "A",
+      displayName: "Ada",
+      doubles: { elo: 1016, wins: 1, losses: 0, lastPlayedAt: 1_790_000_000_000 },
+      singles: { elo: 984, wins: 0, losses: 1 },
+    })
+    expect(record.doubles?.lastPlayedAt).toBe(1_790_000_000_000)
+    expect(record.singles).not.toHaveProperty("lastPlayedAt")
+  })
+
+  it("stamps the deploy time only on ratings that have no last game time", () => {
+    const deployedAt = 1_790_000_000_000
+    const paths = (item: Record<string, unknown>) =>
+      lastPlayedBackfills(item, deployedAt).map((update) => update.UpdateExpression)
+    const key = { teamId: "T1", userId: "A", displayName: "Ada" }
+    expect(
+      paths({
+        ...key,
+        doubles: { elo: 1016, wins: 1, losses: 0 },
+        singles: { elo: 984, wins: 0, losses: 1, lastPlayedAt: 1 },
+      }),
+    ).toEqual(["SET doubles.lastPlayedAt = :playedAt"])
+    expect(paths({ ...key, elo: 1048, wins: 3, losses: 0 })).toEqual(["SET lastPlayedAt = :playedAt"])
+    expect(paths({ ...key, singles: { elo: 1016, wins: 1, losses: 0 } })).toEqual([
+      "SET singles.lastPlayedAt = :playedAt",
+    ])
+    expect(paths({ ...key, doubles: { elo: 1016, wins: 1, losses: 0, lastPlayedAt: 1 } })).toEqual([])
+
+    const [update] = lastPlayedBackfills({ ...key, elo: 1048, wins: 3, losses: 0 }, deployedAt)
+    expect(update?.Key).toEqual({ teamId: "T1", userId: "A" })
+    expect(update?.ConditionExpression).toContain("attribute_not_exists(lastPlayedAt)")
+    expect(update?.ExpressionAttributeValues).toEqual({ ":playedAt": deployedAt })
+  })
+
+  it("reads a backfilled legacy rating with its time", () => {
+    expect(
+      playerFromItem({ teamId: "T1", userId: "A", displayName: "Ada", elo: 1048, wins: 3, losses: 0, lastPlayedAt: 5 })
+        .doubles?.lastPlayedAt,
+    ).toBe(5)
   })
 })

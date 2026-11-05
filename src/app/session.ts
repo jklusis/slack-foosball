@@ -11,6 +11,7 @@ export async function handleAction(
   repo: GameRepository,
   input: { teamId: string; gameId: string; actor: Player; action: Click },
   random: () => number = Math.random,
+  now: () => number = Date.now,
 ): Promise<ActionOutcome> {
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const stored = await repo.get(input.teamId, input.gameId)
@@ -21,7 +22,7 @@ export async function handleAction(
 
     const write =
       result.kind === "complete"
-        ? await repo.complete(stored.version, result.game, result.standings)
+        ? await repo.complete(stored.version, result.game, result.standings, now())
         : await repo.compareAndSwap(stored.version, result.game)
     if (write === "ok") return { type: "replace", game: result.game }
   }

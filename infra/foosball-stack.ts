@@ -10,6 +10,7 @@ export type FoosballStackProps = cdk.StackProps & {
   apiKey: string
   signingSecret: string
   botToken: string
+  inactiveDays?: number
 }
 
 export class FoosballStack extends cdk.Stack {
@@ -51,6 +52,7 @@ export class FoosballStack extends cdk.Stack {
         SLACK_BOT_TOKEN: props.botToken,
         GAMES_TABLE: games.tableName,
         PLAYERS_TABLE: players.tableName,
+        ...(props.inactiveDays !== undefined ? { FOOSBALL_INACTIVE_DAYS: String(props.inactiveDays) } : {}),
       },
       bundling: {
         target: "node26",

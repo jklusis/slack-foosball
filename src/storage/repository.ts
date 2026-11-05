@@ -13,6 +13,7 @@ export interface GameRepository {
     expectedVersion: number,
     game: CompletedGame,
     standings: readonly PlayerStanding[],
+    playedAt: number,
   ): Promise<"ok" | "conflict">
   getStandings(teamId: string, userIds: readonly string[], format: LadderFormat): Promise<PlayerStanding[]>
   listLadders(teamId: string): Promise<Ladder>

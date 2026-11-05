@@ -78,7 +78,10 @@ export type RatingChangesOf<F extends Format> = F extends "singles"
   ? [RatingChange, RatingChange]
   : [RatingChange, RatingChange, RatingChange, RatingChange]
 
-export type PlayerStanding = Rating & {
+// lastPlayedAt is epoch ms of the last saved game on that ladder. Ratings saved before it was recorded have none.
+export type LadderRating = Rating & { lastPlayedAt?: number }
+
+export type PlayerStanding = LadderRating & {
   userId: string
   displayName: string
 }

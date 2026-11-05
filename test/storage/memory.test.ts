@@ -6,6 +6,8 @@ import { requireFour } from "../../src/domain/types"
 import { MemoryRepository } from "../../src/storage/memory"
 import { player } from "../helpers"
 
+const playedAt = Date.UTC(2026, 9, 1)
+
 const roster = [player("A"), player("B"), player("C"), player("D")]
 
 describe("MemoryRepository", () => {
@@ -58,11 +60,12 @@ describe("MemoryRepository", () => {
     expect(await repo.compareAndSwap(1, reporting)).toBe("ok")
     const rated = apply(reporting, { type: "save", userId: "A", ratings: new Map() })
     if (rated.kind !== "complete") throw new Error("expected complete")
-    expect(await repo.complete(2, rated.game, rated.standings)).toBe("ok")
+    expect(await repo.complete(2, rated.game, rated.standings, playedAt)).toBe("ok")
     const rewritten = rated.standings.map((standing) => ({ ...standing, elo: 1 }))
-    expect(await repo.complete(2, rated.game, rewritten)).toBe("conflict")
+    expect(await repo.complete(2, rated.game, rewritten, playedAt)).toBe("conflict")
     const ladders = await repo.listLadders("T1")
     expect(ladders.doubles.find((standing) => standing.userId === "A")?.elo).toBe(1016)
+    expect(ladders.doubles.find((standing) => standing.userId === "A")?.lastPlayedAt).toBe(playedAt)
     expect(ladders.singles).toEqual([])
   })
 
@@ -93,7 +96,7 @@ describe("MemoryRepository", () => {
     expect(await repo.compareAndSwap(1, reporting)).toBe("ok")
     const rated = apply(reporting, { type: "save", userId: "A", ratings: new Map() })
     if (rated.kind !== "complete") throw new Error("expected complete")
-    expect(await repo.complete(2, rated.game, rated.standings)).toBe("ok")
+    expect(await repo.complete(2, rated.game, rated.standings, playedAt)).toBe("ok")
     const ladders = await repo.listLadders("T1")
     expect(ladders.doubles.find((standing) => standing.userId === "A")?.elo).toBe(1016)
     expect(ladders.doubles.find((standing) => standing.userId === "C")?.elo).toBe(984)

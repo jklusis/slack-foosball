@@ -53,8 +53,12 @@ export function renderGame(game: Game): SlackView {
   }
 }
 
-export function renderLadder(ladder: Ladder): SlackView {
-  const text = `${ladderSection("2v2", ladder.doubles)}\n\n${ladderSection("1v1", ladder.singles)}`
+export function renderLadder(ladder: Ladder, inactiveDays: number): SlackView {
+  const text = [
+    ladderSection("2v2", ladder.doubles),
+    ladderSection("1v1", ladder.singles),
+    `_${copy.inactiveHidden(inactiveDays)}_`,
+  ].join("\n\n")
   return { text: "Foosball ratings", blocks: [section(text)] }
 }
 
