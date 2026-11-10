@@ -22,7 +22,7 @@ Several games may be open in the same channel at once.
 
 ## Game flow
 
-A game is one message. Slack shows that message to everyone, and a button cannot be disabled, so the buttons on the message change with the phase. Join and Leave are both shown while the game is open. A click that does not apply (already joined, not in the game, game full) gets an ephemeral note and leaves the message as it is.
+A game is one message. Slack shows that message to everyone, and a button cannot be disabled, so the buttons on the message change with the phase. Join and Leave are both shown while the game is open, and Start and Notify join them once the roster is full. A click that does not apply (already joined, not in the game, game full) gets an ephemeral note and leaves the message as it is.
 
 ```mermaid
 stateDiagram-v2
@@ -77,7 +77,9 @@ Join the game (0/4)
 [Join] [Leave] [Cancel]
 ```
 
-Start is added only when the roster is full. Anyone may cancel an open game. Only a joined player may start it.
+Start and Notify are added only when the roster is full. Anyone may cancel an open game. Only a joined player may start it or press Notify.
+
+Notify posts `Ready @a, @b, @c, @d?` as a reply in the game message's thread, mentioning every player so each gets a ping. The game message does not change. Each press posts another reply.
 
 **Active, 2v2.** One game, Team A vs Team B, or the drawn teams in a random-teams game. Both teammates receive the same rating change.
 
@@ -154,7 +156,7 @@ A ladder with no active players says so under its own heading.
 | Action | Who |
 | --- | --- |
 | Choose a 2v2 mode, Join, Leave, cancel a game in setup or open | Anyone who can see the message |
-| Start, Game finished, Cancel game, pick a winner, Save | The players in that game |
+| Start, Notify, Game finished, Cancel game, pick a winner, Save | The players in that game |
 
 Unauthorized clicks get an ephemeral reply. The player check is one function, so it can be relaxed later without rewriting the flow.
 
@@ -163,12 +165,12 @@ Unauthorized clicks get an ephemeral reply. The player check is one function, so
 ```
 Slack mention or button  --POST-->  Lambda Function URL  -->  domain  -->  DynamoDB
                                           |
-                                          +-- chat.postMessage --> channel message
+                                          +-- chat.postMessage --> channel message, or a reply in its thread
                                           +-- chat.update --> the same game message
                                           +-- chat.postEphemeral --> a private note
 ```
 
-A mention is answered in the channel with `chat.postMessage`, using the bot token. The Lambda then returns HTTP 200 with an empty body. `@Foosball ping` only checks that this path is up: it posts `pong!` and does not read the tables. Button clicks must be answered with HTTP 200 within 3 seconds. The game message is then updated with `chat.update`, and a rejection is posted with `chat.postEphemeral`. Slack's `response_url` expires after 30 minutes, so a game can sit for hours and the next click still updates the same message.
+A mention is answered in the channel with `chat.postMessage`, using the bot token. The Lambda then returns HTTP 200 with an empty body. `@Foosball ping` only checks that this path is up: it posts `pong!` and does not read the tables. Button clicks must be answered with HTTP 200 within 3 seconds. The game message is then updated with `chat.update`, and a rejection is posted with `chat.postEphemeral`. Slack's `response_url` expires after 30 minutes, so a game can sit for hours and the next click still updates the same message. Notify is the one click that posts instead: `chat.postMessage` with `thread_ts` set to the game message.
 
 The Lambda checks two things before doing any work:
 
@@ -210,7 +212,7 @@ Action ids, stable for tests:
 | action_id | value |
 | --- | --- |
 | `game_2v2_random`, `game_2v2_teams`, `game_2v2_long` (stored as `random`, `match`, `doubles`) | `gameId` |
-| `game_join`, `game_join_a`, `game_join_b`, `game_leave`, `game_cancel`, `game_start`, `game_finish`, `game_save` | `gameId` |
+| `game_join`, `game_join_a`, `game_join_b`, `game_leave`, `game_cancel`, `game_start`, `game_notify`, `game_finish`, `game_save` | `gameId` |
 | `game_pick_home`, `game_pick_away`, and `game_pick` on older messages | `gameId`, round index (`0` for a single game, `0..2` for a 2v2 long game), `home` or `away` |
 
 ## Deploy
@@ -289,4 +291,4 @@ The usual MIT, Apache, and GPL licenses allow that kind of sale, so this project
 
 ## Out of scope
 
-Draws, seasons, manual rating edits, reminders, pinning the bot to one channel name, Secrets Manager, provisioned concurrency, and GitHub Actions.
+Draws, seasons, manual rating edits, scheduled reminders, pinning the bot to one channel name, Secrets Manager, provisioned concurrency, and GitHub Actions.

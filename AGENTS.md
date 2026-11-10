@@ -26,11 +26,11 @@ Node.js is pinned in `.nvmrc`. `npm run verify` must pass with no AWS account an
 - A 2v2 result does not change a 1v1 rating, and the reverse. Save applies ratings once. A second save renders the completed game.
 - `@Foosball 2v2` opens a setup step. Choosing a mode turns it into a 2v2 with random teams, a 2v2 with chosen teams, or a 2v2 long game. All three use the 2v2 ladder.
 - Join order is the pairing order for a 2v2 long game. A random-teams 2v2 draws its teams at Start. The person who mentions `@Foosball 1v1` or `@Foosball 2v2` is not on the roster until they join.
-- Start exists only when the roster is full: two players for 1v1, four for 2v2. Join and Leave both exist for the whole open phase.
+- Start and Notify exist only when the roster is full: two players for 1v1, four for 2v2. Only a player on the roster can press either. Notify replies in the game's thread and leaves the game unchanged. Join and Leave both exist for the whole open phase.
 - After start, only those players can finish, cancel, pick, or save. Anyone can choose a mode, and anyone can cancel while the game is in setup or open.
 - An inapplicable click sends an ephemeral reply and does not change the message.
 - Games and players are keyed by Slack `team_id`. Games already stored keep loading after a change to the game shape.
-- Verify the API key and the Slack signature on the raw body before parsing. Compare secrets in constant time. Mention replies go out with `chat.postMessage`. Button updates use `chat.update` on that message, and `response_url` is only the fallback because it expires after 30 minutes. A private note uses `chat.postEphemeral`. The HTTP response to a mention or a button click is 200, not the new message.
+- Verify the API key and the Slack signature on the raw body before parsing. Compare secrets in constant time. Mention replies and Notify's thread reply go out with `chat.postMessage`. Button updates use `chat.update` on that message, and `response_url` is only the fallback because it expires after 30 minutes. A private note uses `chat.postEphemeral`. The HTTP response to a mention or a button click is 200, not the new message.
 - Roster and phase writes are conditional. A failed condition becomes an ephemeral reply or an idempotent re-render, never a second rating update.
 
 ## Code shape

@@ -75,6 +75,32 @@ describe("handle", () => {
     expect(messages).toHaveLength(1)
   })
 
+  it("pings the full roster in the game's thread when a player presses notify", async () => {
+    const { deps, messages, updates, notes } = harness()
+    await handle(event(mention("2v2")), deps)
+    await handle(event(payload({ action_id: "game_2v2_long", value: "game-1", user: "U9", username: "zed" })), deps)
+    for (const id of ["A", "B", "C"]) {
+      await handle(event(payload({ action_id: "game_join", value: "game-1", user: id, username: id })), deps)
+    }
+    const notify = (userId: string) =>
+      handle(event(payload({ action_id: "game_notify", value: "game-1", user: userId, username: userId })), deps)
+
+    await notify("A")
+    expect(notes.at(-1)).toEqual({ channelId: "C1", userId: "A", text: copy.needFour })
+
+    await handle(event(payload({ action_id: "game_join", value: "game-1", user: "D", username: "D" })), deps)
+    const updatesBefore = updates.length
+    expect(await notify("E")).toEqual({ statusCode: 200, body: "" })
+    expect(notes.at(-1)).toEqual({ channelId: "C1", userId: "E", text: copy.notAPlayer })
+    expect(messages).toHaveLength(1)
+
+    expect(await notify("C")).toEqual({ statusCode: 200, body: "" })
+    expect(messages).toHaveLength(2)
+    expect(messages[1]).toMatchObject({ channelId: "C1", threadTs: "111.222", text: "Ready <@A>, <@B>, <@C>, <@D>?" })
+    expect(updates).toHaveLength(updatesBefore)
+    expect(notes).toHaveLength(2)
+  })
+
   it("opens a 1v1 in the channel that mentioned the bot", async () => {
     const { deps, repo, messages } = harness()
     const response = await handle(event(mention("1v1", "C2")), deps)
@@ -340,7 +366,7 @@ describe("handle", () => {
 
 function harness(repo: GameRepository = new MemoryRepository()) {
   const posts: Array<{ url: string; body: Record<string, unknown> }> = []
-  const messages: Array<{ channelId: string; text: string; blocks: unknown }> = []
+  const messages: Array<{ channelId: string; text: string; blocks: unknown; threadTs?: string }> = []
   const updates: Array<{ channelId: string; messageTs: string; text: string; blocks: unknown }> = []
   const notes: Array<{ channelId: string; userId: string; text: string }> = []
   const deps = {
@@ -352,8 +378,8 @@ function harness(repo: GameRepository = new MemoryRepository()) {
       },
     },
     channel: {
-      async post(channelId: string, view: { text: string; blocks: unknown }) {
-        messages.push({ channelId, text: view.text, blocks: view.blocks })
+      async post(channelId: string, view: { text: string; blocks: unknown }, threadTs?: string) {
+        messages.push({ channelId, text: view.text, blocks: view.blocks, ...(threadTs ? { threadTs } : {}) })
       },
       async update(channelId: string, messageTs: string, view: { text: string; blocks: unknown }) {
         updates.push({ channelId, messageTs, text: view.text, blocks: view.blocks })

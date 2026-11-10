@@ -3,7 +3,7 @@ import { pairings } from "../../src/domain/pairings"
 import type { ActiveGame, FourPlayers, RatingChange, ReportingGame } from "../../src/domain/types"
 import { requireFour } from "../../src/domain/types"
 import type { Block } from "../../src/slack/render"
-import { renderGame, renderLadder } from "../../src/slack/render"
+import { renderGame, renderLadder, renderReadyCheck } from "../../src/slack/render"
 import { player } from "../helpers"
 
 const roster = [player("A", "Ada"), player("B", "Ben"), player("C", "Cia"), player("D", "Dan")]
@@ -100,6 +100,7 @@ describe("renderGame", () => {
     expect(textOf(waiting.blocks)).toContain("4. _waiting_")
     expect(actionIds(renderGame({ ...open, players: roster }).blocks)).toEqual([
       "game_start",
+      "game_notify",
       "game_join",
       "game_leave",
       "game_cancel",
@@ -136,30 +137,48 @@ describe("renderGame", () => {
     })
     expect(actionIds(full.blocks)).toEqual([
       "game_start",
+      "game_notify",
       "game_join",
       "game_leave",
       "game_cancel",
     ])
   })
 
-  it("lets players join team A or team B in a 2v2", () => {
+  it("lets players join team A or team B in a 2v2, and adds start and notify when both are full", () => {
     const ada = roster[0]
     if (!ada) throw new Error("missing player")
-    const view = renderGame({
+    const open = {
       id: "g1",
       teamId: "T1",
       channelId: "C1",
       createdBy: "Z",
-      phase: "open",
-      format: "match",
-      players: [ada],
-      teamA: [ada],
-      teamB: [],
-    })
+      phase: "open" as const,
+      format: "match" as const,
+    }
+    const view = renderGame({ ...open, players: [ada], teamA: [ada], teamB: [] })
     expect(actionIds(view.blocks)).toEqual(["game_join_a", "game_join_b", "game_leave", "game_cancel"])
     expect(textOf(view.blocks)).toContain("*New 2v2 game*")
     expect(textOf(view.blocks)).toContain("*Team A (1/2)*")
     expect(textOf(view.blocks)).toContain("*Team B (0/2)*")
+
+    const [, ben, cia, dan] = roster
+    if (!ben || !cia || !dan) throw new Error("missing players")
+    const full = renderGame({ ...open, players: roster, teamA: [ada, ben], teamB: [cia, dan] })
+    expect(actionIds(full.blocks)).toEqual([
+      "game_start",
+      "game_notify",
+      "game_join_a",
+      "game_join_b",
+      "game_leave",
+      "game_cancel",
+    ])
+  })
+
+  it("pings every player by name in the ready check", () => {
+    const view = renderReadyCheck(roster)
+    expect(view.text).toBe("Ready <@A>, <@B>, <@C>, <@D>?")
+    expect(textOf(view.blocks)).toBe("Ready <@A>, <@B>, <@C>, <@D>?")
+    expect(actionIds(view.blocks)).toEqual([])
   })
 
   it("lists the three games while the match is active", () => {

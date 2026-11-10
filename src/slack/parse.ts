@@ -161,6 +161,8 @@ function clickFrom(
       return { gameId: value, action: { type: "cancel" } }
     case actionId.start:
       return { gameId: value, action: { type: "start" } }
+    case actionId.notify:
+      return { gameId: value, action: { type: "notify" } }
     case actionId.finish:
       return { gameId: value, action: { type: "finish" } }
     case actionId.save:

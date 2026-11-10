@@ -6,6 +6,7 @@ import type { GameRepository } from "../storage/repository"
 export type ActionOutcome =
   | { type: "replace"; game: Game }
   | { type: "ephemeral"; reason: RejectReason | FlowReason }
+  | { type: "notify"; players: readonly Player[] }
 
 export async function handleAction(
   repo: GameRepository,
@@ -19,6 +20,7 @@ export async function handleAction(
     const result = apply(stored.game, await commandFor(repo, stored.game, input, random))
     if (result.kind === "reject") return { type: "ephemeral", reason: result.reason }
     if (result.kind === "keep") return { type: "replace", game: result.game }
+    if (result.kind === "notify") return { type: "notify", players: result.players }
 
     const write =
       result.kind === "complete"
@@ -47,6 +49,7 @@ async function commandFor(
       return { type: "start", userId: actor.userId, random }
     case "leave":
     case "finish":
+    case "notify":
       return { type: action.type, userId: actor.userId }
     case "pick":
       return { type: "pick", userId: actor.userId, round: action.round, side: action.side }
