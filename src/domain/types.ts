@@ -106,6 +106,15 @@ export function rosterSize(format: "singles" | "doubles" | "random"): number {
   return format === "singles" ? 2 : 4
 }
 
+// Start and Notify share this check, and render uses it to decide when they show.
+export function rosterShortfall(game: OpenGame): RejectReason | undefined {
+  if (game.format === "match") {
+    return game.teamA.length === 2 && game.teamB.length === 2 ? undefined : Reason.needTeams
+  }
+  if (game.players.length === rosterSize(game.format)) return undefined
+  return game.format === "singles" ? Reason.needTwo : Reason.needFour
+}
+
 export type Setup2v2Game = GameBase & { phase: "setup"; format: "2v2"; players: [] }
 
 export type OpenGame =
@@ -200,6 +209,7 @@ export type Click =
   | { type: "finish" }
   | { type: "pick"; round: 0 | 1 | 2; side: Side }
   | { type: "save" }
+  | { type: "notify" }
 
 export function requireTwo<T>(values: readonly T[]): [T, T] {
   const [first, second] = values

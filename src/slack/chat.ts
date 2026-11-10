@@ -1,18 +1,19 @@
 import type { SlackView } from "./render"
 
 export type ChannelPoster = {
-  post(channelId: string, view: SlackView): Promise<void>
+  post(channelId: string, view: SlackView, threadTs?: string): Promise<void>
   update(channelId: string, messageTs: string, view: SlackView): Promise<void>
   ephemeral(channelId: string, userId: string, text: string): Promise<void>
 }
 
 export function slackChannelPoster(token: string): ChannelPoster {
   return {
-    post(channelId, view) {
+    post(channelId, view, threadTs) {
       return slackApi(token, "chat.postMessage", {
         channel: channelId,
         text: view.text,
         blocks: view.blocks,
+        ...(threadTs ? { thread_ts: threadTs } : {}),
       })
     },
     update(channelId, messageTs, view) {

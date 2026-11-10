@@ -1,7 +1,7 @@
 import { assertNever } from "./assert-never"
 import { rateSession } from "./elo"
 import { matchRound, pairings, randomTeams, singlesMatch } from "./pairings"
-import { Reason, baseOf, requireFour, requireTwo, rosterSize } from "./types"
+import { Reason, baseOf, requireFour, requireTwo, rosterShortfall, rosterSize } from "./types"
 import type {
   ActiveGame,
   CancelledGame,
@@ -37,12 +37,14 @@ export type GameCommand =
   | { type: "finish"; userId: string }
   | { type: "pick"; userId: string; round: 0 | 1 | 2; side: Side }
   | { type: "save"; userId: string; ratings: ReadonlyMap<string, Rating> }
+  | { type: "notify"; userId: string }
 
 export type ApplyResult =
   | { kind: "reject"; reason: RejectReason }
   | { kind: "keep"; game: Game }
   | { kind: "save"; game: Exclude<Game, CompletedGame> }
   | { kind: "complete"; game: CompletedGame; standings: PlayerStanding[] }
+  | { kind: "notify"; players: readonly Player[] }
 
 export function newGame(base: GameBase, kind: NewGameKind): NewGame {
   if (kind === "singles") return { ...baseOf(base), phase: "open", format: "singles", players: [] }
@@ -67,6 +69,8 @@ export function apply(game: Game, command: GameCommand): ApplyResult {
       return pick(game, command.userId, command.round, command.side)
     case "save":
       return save(game, command.userId, command.ratings)
+    case "notify":
+      return notify(game, command.userId)
     default:
       return assertNever(command)
   }
@@ -169,12 +173,11 @@ function start(game: Game, userId: string, random: () => number): ApplyResult {
     return keep(game)
   }
   if (game.phase !== "open") return reject(Reason.wrongPhase)
-  if (game.format === "match") return startMatch(game, userId)
-  if (game.format === "random") return startRandom(game, userId, random)
-  if (game.players.length !== rosterSize(game.format)) {
-    return reject(game.format === "singles" ? Reason.needTwo : Reason.needFour)
-  }
+  const shortfall = rosterShortfall(game)
+  if (shortfall) return reject(shortfall)
   if (!hasPlayer(game.players, userId)) return reject(Reason.notAPlayer)
+  if (game.format === "match") return startMatch(game)
+  if (game.format === "random") return startRandom(game, random)
   if (game.format === "singles") {
     const players = requireTwo(game.players)
     const active: ActiveGame = {
@@ -197,9 +200,7 @@ function start(game: Game, userId: string, random: () => number): ApplyResult {
   return saveGame(active)
 }
 
-function startMatch(game: Extract<OpenGame, { format: "match" }>, userId: string): ApplyResult {
-  if (game.teamA.length !== 2 || game.teamB.length !== 2) return reject(Reason.needTeams)
-  if (!hasPlayer(game.players, userId)) return reject(Reason.notAPlayer)
+function startMatch(game: Extract<OpenGame, { format: "match" }>): ApplyResult {
   const home = requireTwo(game.teamA)
   const away = requireTwo(game.teamB)
   const active: ActiveGame = {
@@ -212,13 +213,7 @@ function startMatch(game: Extract<OpenGame, { format: "match" }>, userId: string
   return saveGame(active)
 }
 
-function startRandom(
-  game: Extract<OpenGame, { format: "random" }>,
-  userId: string,
-  random: () => number,
-): ApplyResult {
-  if (game.players.length !== rosterSize(game.format)) return reject(Reason.needFour)
-  if (!hasPlayer(game.players, userId)) return reject(Reason.notAPlayer)
+function startRandom(game: Extract<OpenGame, { format: "random" }>, random: () => number): ApplyResult {
   const rounds = randomTeams(requireFour(game.players), random)
   const active: ActiveGame = {
     ...baseOf(game),
@@ -228,6 +223,14 @@ function startRandom(
     rounds,
   }
   return saveGame(active)
+}
+
+function notify(game: Game, userId: string): ApplyResult {
+  if (game.phase !== "open") return reject(Reason.wrongPhase)
+  const shortfall = rosterShortfall(game)
+  if (shortfall) return reject(shortfall)
+  if (!hasPlayer(game.players, userId)) return reject(Reason.notAPlayer)
+  return { kind: "notify", players: game.players }
 }
 
 function finish(game: Game, userId: string): ApplyResult {

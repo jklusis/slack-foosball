@@ -342,6 +342,34 @@ describe("game transitions", () => {
   })
 })
 
+describe("ready check", () => {
+  it("lists the roster for a player once the game is full", () => {
+    expect(apply(open(roster), { type: "notify", userId: "C" })).toEqual({ kind: "notify", players: roster })
+    const pair = { ...singles(), players: [ada, ben] }
+    expect(apply(pair, { type: "notify", userId: "B" })).toEqual({ kind: "notify", players: [ada, ben] })
+    const teams = { ...match(), players: [ada, ben, cia, dan], teamA: [ada, ben], teamB: [cia, dan] }
+    expect(apply(teams, { type: "notify", userId: "D" })).toEqual({ kind: "notify", players: roster })
+  })
+
+  it("rejects someone outside the game", () => {
+    expect(apply(open(roster), { type: "notify", userId: "E" })).toEqual({ kind: "reject", reason: Reason.notAPlayer })
+  })
+
+  it("rejects a roster that is not full, with the same reason as Start", () => {
+    expect(apply(open([ada]), { type: "notify", userId: "A" })).toEqual({ kind: "reject", reason: Reason.needFour })
+    expect(apply({ ...singles(), players: [ada] }, { type: "notify", userId: "A" })).toEqual({
+      kind: "reject",
+      reason: Reason.needTwo,
+    })
+    const halfTeams = { ...match(), players: [ada, ben, cia], teamA: [ada, ben], teamB: [cia] }
+    expect(apply(halfTeams, { type: "notify", userId: "A" })).toEqual({ kind: "reject", reason: Reason.needTeams })
+  })
+
+  it("rejects once the game has started", () => {
+    expect(apply(active(), { type: "notify", userId: "A" })).toEqual({ kind: "reject", reason: Reason.wrongPhase })
+  })
+})
+
 function setup(): Setup2v2Game {
   return {
     id: "game-1",

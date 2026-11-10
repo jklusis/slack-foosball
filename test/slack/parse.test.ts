@@ -37,6 +37,15 @@ describe("parseSlackBody", () => {
     expect(parseSlackBody(click("game_2v2_other", "game-1"))).toMatchObject({ kind: "invalid-action" })
   })
 
+  it("reads the notify button", () => {
+    expect(parseSlackBody(click("game_notify", "game-1"))).toMatchObject({
+      kind: "action",
+      gameId: "game-1",
+      messageTs: expect.any(String),
+      action: { type: "notify" },
+    })
+  })
+
   it("reads a pick button", () => {
     const body = new URLSearchParams({
       payload: JSON.stringify({

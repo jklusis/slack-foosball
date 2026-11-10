@@ -6,7 +6,15 @@ import { Reason } from "./domain/types"
 import { rejectionText } from "./slack/copy"
 import { parseSlackBody, type ParsedSlack } from "./slack/parse"
 import type { ChannelPoster } from "./slack/chat"
-import { renderGame, renderHelp, renderLadder, renderPong, renderUnknown, type SlackView } from "./slack/render"
+import {
+  renderGame,
+  renderHelp,
+  renderLadder,
+  renderPong,
+  renderReadyCheck,
+  renderUnknown,
+  type SlackView,
+} from "./slack/render"
 import type { SlackPoster } from "./slack/reply"
 import { safeEqual, verifySlackRequest } from "./slack/verify"
 import type { GameRepository } from "./storage/repository"
@@ -94,6 +102,9 @@ async function dispatch(parsed: ParsedSlack, deps: Deps): Promise<HttpResult> {
 
   const outcome = await handleAction(deps.repo, parsed, deps.random, deps.now)
   if (outcome.type === "ephemeral") return note(deps, parsed, rejectionText(outcome.reason))
+  if (outcome.type === "notify") {
+    return say(deps.channel, parsed.channelId, renderReadyCheck(outcome.players), parsed.messageTs)
+  }
   return revise(deps, parsed, renderGame(outcome.game))
 }
 
@@ -137,10 +148,15 @@ async function note(
   })
 }
 
-async function say(channel: ChannelPoster, channelId: string, view: SlackView): Promise<HttpResult> {
+async function say(
+  channel: ChannelPoster,
+  channelId: string,
+  view: SlackView,
+  threadTs?: string,
+): Promise<HttpResult> {
   try {
-    // Ack only after the post. A non-200 makes Slack retry the mention.
-    await channel.post(channelId, view)
+    // Ack only after the post. A non-200 makes Slack retry the mention or click.
+    await channel.post(channelId, view, threadTs)
   } catch (error) {
     console.error("Failed to post Slack message", error)
   }

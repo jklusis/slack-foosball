@@ -1,5 +1,5 @@
 import { rankStandings } from "../domain/ladder"
-import { rosterSize } from "../domain/types"
+import { rosterShortfall, rosterSize } from "../domain/types"
 import type {
   ActiveGame,
   CancelledGame,
@@ -70,6 +70,11 @@ export function renderUnknown(): SlackView {
   return { text: copy.unknown, blocks: [section(copy.unknown)] }
 }
 
+export function renderReadyCheck(players: readonly Player[]): SlackView {
+  const text = `Ready ${players.map(mention).join(", ")}?`
+  return { text, blocks: [section(text)] }
+}
+
 export function renderPong(): SlackView {
   return { text: copy.pong, blocks: [section(copy.pong)] }
 }
@@ -99,8 +104,7 @@ function renderOpen(game: OpenGame): SlackView {
   }).join("\n")
   const note = game.format === "random" ? "\nTeams are drawn at random when the game starts." : ""
   const text = `*${heading}*${note}\nJoin the game (${game.players.length}/${size})\n\n${roster}`
-  const buttons: Button[] = []
-  if (game.players.length === size) buttons.push(button(actionId.start, "Start", game.id, "primary"))
+  const buttons = readyButtons(game)
   buttons.push(
     button(actionId.join, "Join", game.id),
     button(actionId.leave, "Leave", game.id),
@@ -115,10 +119,7 @@ function renderOpen(game: OpenGame): SlackView {
 function renderOpenMatch(game: Extract<OpenGame, { format: "match" }>): SlackView {
   const label = formatLabel(game.format)
   const text = `*New ${label} game*\n${teamLines("Team A", game.teamA)}\n${teamLines("Team B", game.teamB)}`
-  const buttons: Button[] = []
-  if (game.teamA.length === 2 && game.teamB.length === 2) {
-    buttons.push(button(actionId.start, "Start", game.id, "primary"))
-  }
+  const buttons = readyButtons(game)
   buttons.push(
     button(actionId.joinA, "Join A", game.id),
     button(actionId.joinB, "Join B", game.id),
@@ -129,6 +130,11 @@ function renderOpenMatch(game: Extract<OpenGame, { format: "match" }>): SlackVie
     text: `New ${label} game`,
     blocks: [section(text), actions(buttons)],
   }
+}
+
+function readyButtons(game: OpenGame): Button[] {
+  if (rosterShortfall(game)) return []
+  return [button(actionId.start, "Start", game.id, "primary"), button(actionId.notify, "Notify", game.id)]
 }
 
 function teamLines(name: string, players: readonly Player[]): string {

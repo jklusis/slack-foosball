@@ -10,6 +10,7 @@ export const actionId = {
   leave: "game_leave",
   cancel: "game_cancel",
   start: "game_start",
+  notify: "game_notify",
   finish: "game_finish",
   pick: "game_pick",
   pickHome: "game_pick_home",
