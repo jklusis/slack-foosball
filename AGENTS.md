@@ -5,7 +5,8 @@
 ## Commands
 
 ```bash
-npm run verify    # typecheck, then tests. Run it before opening a PR.
+npm run verify    # lint and format, typecheck, then tests. Run it before opening a PR.
+npm run fix       # applies Biome's format and safe lint fixes
 npm test
 npm run typecheck
 ```
@@ -28,13 +29,12 @@ Agents don't deploy. `make deploy`, `make update` and `make destroy` need AWS cr
 
 ## Code shape
 
-- Dependencies point inward. `handler.ts` and `app/` call `domain/`, and reach storage only through the repository interface. `slack/` and `storage/` translate to and from domain types. `domain/` imports nothing outside itself and does no I/O; randomness and time come in as arguments.
+- Dependencies point inward. `handler.ts` and `app/` call `domain/`, and reach storage only through the repository interface. `slack/` and `storage/` translate to and from domain types. `domain/` imports nothing outside itself and does no I/O; randomness and time come in as arguments. `test/layers.test.ts` enforces this.
 - Parse and validate at the edges, in `src/slack/parse.ts` and `src/storage/codec.ts`. Everything else takes domain types, with no Slack payloads or AWS types.
 - Add a helper when a second caller needs it, in the module both callers already use (`rosterSize` lives in the domain, not in `render.ts` and again in `game.ts`).
 - Name for scope. Code that serves one format says so (`renderSetup2v2`, `Mode2v2`), so nobody reuses it for a 1v1 by mistake.
 - Before adding a branch on `format`, find the existing one and extend it. Two functions that differ only by format should be one function.
 - Expected user outcomes (`not-a-player`, `game-full`) are return values. Throw only when the process cannot continue (bad config, failed I/O, a broken invariant).
-- Strict TypeScript. No `any`, and no non-null assertion to paper over a missing check.
 - Prefer a short pure function over a class that only holds functions.
 - Comments explain a non-obvious constraint (Slack's 3 second ack, raw-body signature). Do not comment the mechanics the code already shows.
 
