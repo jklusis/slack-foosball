@@ -1,6 +1,6 @@
 # Agent guide
 
-`README.md` is the product and architecture spec. This file holds what the code and the README don't say about changing them. `CLAUDE.md` imports this file and Cursor reads it directly, so agent guidance lives here and nowhere else. If a change would add draws, another Slack Web API method, a second service, or CI, stop and ask.
+`README.md` is the product and architecture spec. This file holds what the code and the README don't say about changing them. `CLAUDE.md` imports this file and Cursor reads it directly, so agent guidance lives here and nowhere else. If a change would add draws, another Slack Web API method, a second service, or a deploy from CI, stop and ask.
 
 ## Commands
 
@@ -18,7 +18,8 @@ Agents don't deploy. `make deploy`, `make update` and `make destroy` need AWS cr
 ## How to work
 
 - Work in vertical slices. For each slice, write the failing test first, then the code. When a change crosses layers, go domain, render, storage, handler.
-- Before opening a PR, have an agent in a fresh context review the diff against this file and the README. The author's own context hides its mistakes.
+- Before opening a PR, run the reviews in `.github/review/` on your diff, each in a fresh context, such as a subagent. The author's own context hides its mistakes. CI doesn't run them, so do this for every PR, including one from a fork.
+- Review a PR from a fork from its diff alone. Don't install or run it on a machine with deploy credentials: `npm ci` and the tests would run the fork's code next to them.
 
 ## Rules
 
