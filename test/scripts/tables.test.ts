@@ -17,7 +17,11 @@ describe("dynamoTableNames", () => {
     expect(
       playersTableName([
         { ResourceType: "AWS::DynamoDB::Table", LogicalResourceId: "Games3A1B", PhysicalResourceId: "Foosball-Games" },
-        { ResourceType: "AWS::DynamoDB::Table", LogicalResourceId: "Players9C2D", PhysicalResourceId: "Foosball-Players" },
+        {
+          ResourceType: "AWS::DynamoDB::Table",
+          LogicalResourceId: "Players9C2D",
+          PhysicalResourceId: "Foosball-Players",
+        },
       ]),
     ).toBe("Foosball-Players")
     expect(playersTableName([])).toBeUndefined()

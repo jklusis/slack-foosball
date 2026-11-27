@@ -15,10 +15,7 @@ type ScoredRound = {
   winner: Side
 }
 
-export function rateRound(
-  round: ScoredRound,
-  ratings: ReadonlyMap<string, Rating>,
-): Map<string, Rating> {
+export function rateRound(round: ScoredRound, ratings: ReadonlyMap<string, Rating>): Map<string, Rating> {
   const homeAverage = average(round.home.map((player) => ratingOf(ratings, player.userId).elo))
   const awayAverage = average(round.away.map((player) => ratingOf(ratings, player.userId).elo))
   const expectedHome = 1 / (1 + 10 ** ((awayAverage - homeAverage) / 400))

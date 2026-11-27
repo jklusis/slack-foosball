@@ -19,7 +19,12 @@ describe("backfillLastPlayed", () => {
       {
         Items: [
           { teamId: "T1", userId: "B", displayName: "Ben", singles: { elo: 984, wins: 0, losses: 1 } },
-          { teamId: "T1", userId: "C", displayName: "Cia", doubles: { elo: 1000, wins: 0, losses: 0, lastPlayedAt: 1 } },
+          {
+            teamId: "T1",
+            userId: "C",
+            displayName: "Cia",
+            doubles: { elo: 1000, wins: 0, losses: 0, lastPlayedAt: 1 },
+          },
         ],
       },
     ]

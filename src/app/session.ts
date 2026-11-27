@@ -1,6 +1,14 @@
 import { assertNever } from "../domain/assert-never"
 import { apply, type GameCommand } from "../domain/game"
-import { FlowReason, ladderFormat, type Click, type Game, type Player, type Rating, type RejectReason } from "../domain/types"
+import {
+  type Click,
+  FlowReason,
+  type Game,
+  ladderFormat,
+  type Player,
+  type Rating,
+  type RejectReason,
+} from "../domain/types"
 import type { GameRepository } from "../storage/repository"
 
 export type ActionOutcome =
@@ -60,20 +68,13 @@ async function commandFor(
   }
 }
 
-async function loadRatings(
-  repo: GameRepository,
-  teamId: string,
-  game: Game,
-): Promise<Map<string, Rating>> {
+async function loadRatings(repo: GameRepository, teamId: string, game: Game): Promise<Map<string, Rating>> {
   const standings = await repo.getStandings(
     teamId,
     game.players.map((player) => player.userId),
     ladderFormat(game.format),
   )
   return new Map(
-    standings.map((standing) => [
-      standing.userId,
-      { elo: standing.elo, wins: standing.wins, losses: standing.losses },
-    ]),
+    standings.map((standing) => [standing.userId, { elo: standing.elo, wins: standing.wins, losses: standing.losses }]),
   )
 }

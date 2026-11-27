@@ -81,7 +81,10 @@ function isGameCommand(command: string): command is "1v1" | "2v2" | "top" {
 }
 
 function mentionedCommand(text: string): string {
-  return text.replace(/^\s*<@[^>\s]+(?:\|[^>]+)?>\s*/, "").trim().toLowerCase()
+  return text
+    .replace(/^\s*<@[^>\s]+(?:\|[^>]+)?>\s*/, "")
+    .trim()
+    .toLowerCase()
 }
 
 function parsePayload(payload: string): ParsedSlack | undefined {
@@ -129,10 +132,7 @@ function readMessageTs(payload: Record<string, unknown>): string | undefined {
   return container ?? message
 }
 
-function clickFrom(
-  id: string | undefined,
-  value: string,
-): { gameId: string; action: Click } | undefined {
+function clickFrom(id: string | undefined, value: string): { gameId: string; action: Click } | undefined {
   if (!id || !value) return undefined
   if (isPick(id)) {
     const picked = decodePick(value)

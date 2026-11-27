@@ -26,9 +26,7 @@ export function encodePick(gameId: string, round: 0 | 1 | 2, side: Side): string
   return `${gameId}:${round}:${side}`
 }
 
-export function decodePick(
-  value: string,
-): { gameId: string; round: 0 | 1 | 2; side: Side } | undefined {
+export function decodePick(value: string): { gameId: string; round: 0 | 1 | 2; side: Side } | undefined {
   const match = /^(.*):([012]):(home|away)$/.exec(value)
   const gameId = match?.[1]
   const round = match?.[2]

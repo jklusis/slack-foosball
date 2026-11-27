@@ -2,12 +2,7 @@ import { describe, expect, it } from "vitest"
 import { activeLadder, rankStandings } from "../../src/domain/ladder"
 import type { PlayerStanding } from "../../src/domain/types"
 
-function standing(
-  userId: string,
-  elo: number,
-  wins: number,
-  displayName = userId,
-): PlayerStanding {
+function standing(userId: string, elo: number, wins: number, displayName = userId): PlayerStanding {
   return { userId, displayName, elo, wins, losses: 0 }
 }
 

@@ -1,14 +1,6 @@
-import type {
-  CompletedGame,
-  Game,
-  Ladder,
-  LadderFormat,
-  LadderRating,
-  NewGame,
-  PlayerStanding,
-} from "../domain/types"
+import type { CompletedGame, Game, Ladder, LadderFormat, LadderRating, NewGame, PlayerStanding } from "../domain/types"
 import { ladderFormat } from "../domain/types"
-import { ladderFromPlayers, standingOf, type PlayerRecord } from "./codec"
+import { ladderFromPlayers, type PlayerRecord, standingOf } from "./codec"
 import type { GameRepository, StoredGame } from "./repository"
 
 type StoredPlayer = PlayerRecord & { teamId: string }
@@ -54,11 +46,7 @@ export class MemoryRepository implements GameRepository {
     return "ok"
   }
 
-  async getStandings(
-    teamId: string,
-    userIds: readonly string[],
-    format: LadderFormat,
-  ): Promise<PlayerStanding[]> {
+  async getStandings(teamId: string, userIds: readonly string[], format: LadderFormat): Promise<PlayerStanding[]> {
     const found: PlayerStanding[] = []
     for (const userId of userIds) {
       const record = this.players.get(playerKey(teamId, userId))
@@ -74,12 +62,7 @@ export class MemoryRepository implements GameRepository {
     return ladderFromPlayers(records)
   }
 
-  private writeStanding(
-    teamId: string,
-    format: LadderFormat,
-    standing: PlayerStanding,
-    playedAt: number,
-  ): void {
+  private writeStanding(teamId: string, format: LadderFormat, standing: PlayerStanding, playedAt: number): void {
     const key = playerKey(teamId, standing.userId)
     const current = this.players.get(key)
     const rating: LadderRating = {

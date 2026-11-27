@@ -3,16 +3,15 @@ import type {
   CompletedGame,
   DecidedRound,
   DecidedRoundOf,
-  GameBase,
-  GameFormat,
-  LadderFormat,
   FourPlayers,
   Game,
+  GameBase,
+  GameFormat,
   Ladder,
+  LadderFormat,
   LadderRating,
   Player,
   PlayerStanding,
-  Rating,
   RatingChange,
   Round,
   RoundOf,
@@ -21,7 +20,7 @@ import type {
   ThreeRounds,
   TwoPlayers,
 } from "../domain/types"
-import { ladderFormat, requireFour, requireTwo } from "../domain/types"
+import { requireFour, requireTwo } from "../domain/types"
 import type { StoredGame } from "./repository"
 
 type Item = Record<string, unknown>
@@ -108,12 +107,7 @@ export function standingOf(record: PlayerRecord, format: LadderFormat): PlayerSt
   return standing(record, rating)
 }
 
-export function playerUpdate(
-  teamId: string,
-  format: LadderFormat,
-  standing: PlayerStanding,
-  playedAt: number,
-) {
+export function playerUpdate(teamId: string, format: LadderFormat, standing: PlayerStanding, playedAt: number) {
   return {
     Key: { teamId, userId: standing.userId },
     UpdateExpression: "SET displayName = :displayName, #format = :rating",
@@ -176,13 +170,7 @@ function standing(record: PlayerRecord, rating: LadderRating): PlayerStanding {
   }
 }
 
-function gameFromPhase(
-  phase: string,
-  format: GameFormat,
-  base: GameBase,
-  players: Player[],
-  item: Item,
-): Game {
+function gameFromPhase(phase: string, format: GameFormat, base: GameBase, players: Player[], item: Item): Game {
   if (phase === "setup") {
     if (format !== "2v2") throw new Error(`A setup game cannot have format ${format}`)
     return { ...base, phase, format, players: [] }
@@ -215,12 +203,7 @@ function gameFromPhase(
   return doublesFromPhase(phase, base, players, item)
 }
 
-function doublesFromPhase(
-  phase: string,
-  base: GameBase,
-  players: Player[],
-  item: Item,
-): Game {
+function doublesFromPhase(phase: string, base: GameBase, players: Player[], item: Item): Game {
   const rounds = readDoublesRounds(item.rounds)
   if (!rounds) throw new Error("Game is missing rounds")
   const four = asFourPlayers(players)
@@ -244,12 +227,7 @@ function doublesFromPhase(
   throw new Error(`Unknown game phase ${phase}`)
 }
 
-function matchFromPhase(
-  phase: string,
-  base: GameBase,
-  players: Player[],
-  item: Item,
-): Game {
+function matchFromPhase(phase: string, base: GameBase, players: Player[], item: Item): Game {
   const rounds = readMatchRounds(item.rounds)
   if (!rounds) throw new Error("Game is missing rounds")
   const four = asFourPlayers(players)
@@ -273,12 +251,7 @@ function matchFromPhase(
   throw new Error(`Unknown game phase ${phase}`)
 }
 
-function singlesFromPhase(
-  phase: string,
-  base: GameBase,
-  players: Player[],
-  item: Item,
-): Game {
+function singlesFromPhase(phase: string, base: GameBase, players: Player[], item: Item): Game {
   const rounds = readSinglesRounds(item.rounds)
   if (!rounds) throw new Error("Game is missing rounds")
   const two = asTwoPlayers(players)
@@ -372,7 +345,7 @@ function readSoloRound(value: unknown): RoundOf<"singles"> | undefined {
 
 function readPair(value: unknown): [Player, Player] | undefined {
   const players = readPlayers(value)
-  if (!players || players.length !== 2) return undefined
+  if (players?.length !== 2) return undefined
   const [first, second] = players
   if (!first || !second) return undefined
   return [first, second]
@@ -380,7 +353,7 @@ function readPair(value: unknown): [Player, Player] | undefined {
 
 function readSolo(value: unknown): [Player] | undefined {
   const players = readPlayers(value)
-  if (!players || players.length !== 1) return undefined
+  if (players?.length !== 1) return undefined
   const [first] = players
   if (!first) return undefined
   return [first]
@@ -407,7 +380,14 @@ function readChange(value: unknown): RatingChange | undefined {
   const after = readNumber(value.after)
   const wins = readNumber(value.wins)
   const losses = readNumber(value.losses)
-  if (!userId || displayName === undefined || before === undefined || after === undefined || wins === undefined || losses === undefined) {
+  if (
+    !userId ||
+    displayName === undefined ||
+    before === undefined ||
+    after === undefined ||
+    wins === undefined ||
+    losses === undefined
+  ) {
     return undefined
   }
   return { userId, displayName, before, after, wins, losses }

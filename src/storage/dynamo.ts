@@ -8,14 +8,7 @@ import {
 } from "@aws-sdk/lib-dynamodb"
 import type { CompletedGame, Game, Ladder, LadderFormat, NewGame, PlayerStanding } from "../domain/types"
 import { ladderFormat } from "../domain/types"
-import {
-  gameFromItem,
-  gameToItem,
-  ladderFromPlayers,
-  playerFromItem,
-  playerUpdate,
-  standingOf,
-} from "./codec"
+import { gameFromItem, gameToItem, ladderFromPlayers, playerFromItem, playerUpdate, standingOf } from "./codec"
 import type { GameRepository, StoredGame } from "./repository"
 
 type Item = Record<string, unknown>
@@ -32,9 +25,7 @@ export class DynamoRepository implements GameRepository {
     private readonly playersTable: string,
     client?: DocumentSender,
   ) {
-    this.client =
-      client ??
-      (DynamoDBDocumentClient.from(new DynamoDBClient({})) as unknown as DocumentSender)
+    this.client = client ?? (DynamoDBDocumentClient.from(new DynamoDBClient({})) as unknown as DocumentSender)
   }
 
   async create(game: NewGame): Promise<StoredGame> {
@@ -107,11 +98,7 @@ export class DynamoRepository implements GameRepository {
     }
   }
 
-  async getStandings(
-    teamId: string,
-    userIds: readonly string[],
-    format: LadderFormat,
-  ): Promise<PlayerStanding[]> {
+  async getStandings(teamId: string, userIds: readonly string[], format: LadderFormat): Promise<PlayerStanding[]> {
     const loaded = await Promise.all(
       userIds.map(async (userId) => {
         const result = (await this.client.send(
@@ -142,8 +129,7 @@ function isConditionalFailure(error: unknown): boolean {
   if (error.name !== "TransactionCanceledException" || !("CancellationReasons" in error)) return false
   const reasons = error.CancellationReasons
   return (
-    Array.isArray(reasons) &&
-    reasons.some((reason) => isRecord(reason) && reason.Code === "ConditionalCheckFailed")
+    Array.isArray(reasons) && reasons.some((reason) => isRecord(reason) && reason.Code === "ConditionalCheckFailed")
   )
 }
 

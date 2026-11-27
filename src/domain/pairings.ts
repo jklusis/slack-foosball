@@ -1,5 +1,5 @@
-import { requireFour } from "./types"
 import type { FourPlayers, Player, RoundOf, ThreeRounds, TwoPlayers } from "./types"
+import { requireFour } from "./types"
 
 export function matchRound(home: TwoPlayers, away: TwoPlayers): [RoundOf<"match">] {
   return [{ home, away, winner: null }]

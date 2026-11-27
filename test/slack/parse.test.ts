@@ -21,9 +21,9 @@ describe("parseSlackBody", () => {
     expect(parseSlackBody(mention("begin"))).toMatchObject({ kind: "unknown", channelId: "C1" })
     expect(parseSlackBody(mention("help"))).toMatchObject({ kind: "unknown", channelId: "C1" })
     expect(parseSlackBody(mention("ping"))).toEqual({ kind: "ping", channelId: "C1" })
-    expect(
-      parseSlackBody(JSON.stringify({ type: "event_callback", event: { type: "message", text: "1v1" } })),
-    ).toEqual({ kind: "ignore" })
+    expect(parseSlackBody(JSON.stringify({ type: "event_callback", event: { type: "message", text: "1v1" } }))).toEqual(
+      { kind: "ignore" },
+    )
   })
 
   it("reads a 2v2 mode button", () => {

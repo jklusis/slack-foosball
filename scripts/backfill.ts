@@ -1,7 +1,7 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb"
 import { DynamoDBDocumentClient, ScanCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb"
-import type { DocumentSender } from "../src/storage/dynamo"
 import { lastPlayedBackfills } from "../src/storage/codec"
+import type { DocumentSender } from "../src/storage/dynamo"
 
 type ScanPage = { Items?: Record<string, unknown>[]; LastEvaluatedKey?: Record<string, unknown> }
 
