@@ -61,6 +61,9 @@ export async function handle(event: unknown, deps: Deps): Promise<HttpResult> {
     nowMs: deps.now(),
   })
   if (!verified) return text(401, "")
+  // Slack re-sends an event it got no answer to within 3 seconds. The Lambda keeps running after Slack
+  // gives up, so the first delivery normally still posts. Handling the retry would post a second game.
+  if (header(incoming.headers, "x-slack-retry-reason") === "http_timeout") return text(200, "")
 
   const parsed = parseSlackBody(rawBody)
   if (!parsed) return text(400, "")

@@ -181,6 +181,24 @@ describe("handle", () => {
     expect(games?.game.phase).toBe("setup")
   })
 
+  it("does not open a second game when Slack retries a mention that timed out", async () => {
+    const { deps, repo, messages } = harness()
+    let next = 0
+    deps.newId = () => `game-${++next}`
+    const body = mention("1v1")
+    await handle(event(body), deps)
+    expect(await handle(retry(body, "http_timeout"), deps)).toEqual({ statusCode: 200, body: "" })
+    expect(messages).toHaveLength(1)
+    expect(await repo.get("T1", "game-2")).toBeUndefined()
+  })
+
+  it("handles a Slack retry of a mention that failed", async () => {
+    const { deps, repo, messages } = harness()
+    await handle(retry(mention("1v1"), "http_error"), deps)
+    expect(messages).toHaveLength(1)
+    expect((await repo.get("T1", "game-1"))?.game.phase).toBe("open")
+  })
+
   it("updates the message when a player joins and leaves it unchanged when the game is full", async () => {
     const { deps, repo, updates, notes } = harness()
     await repo.create({
@@ -419,6 +437,11 @@ function event(body: string, key = apiKey, signatureOverride?: string) {
       "X-Slack-Request-Timestamp": timestamp,
     },
   }
+}
+
+function retry(body: string, reason: string) {
+  const base = event(body)
+  return { ...base, headers: { ...base.headers, "X-Slack-Retry-Num": "1", "X-Slack-Retry-Reason": reason } }
 }
 
 function sign(body: string): string {
