@@ -23,6 +23,7 @@ export class FoosballStack extends cdk.Stack {
       partitionKey: { name: "teamId", type: dynamodb.AttributeType.STRING },
       sortKey: { name: "gameId", type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      pointInTimeRecoverySpecification: { pointInTimeRecoveryEnabled: true },
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     })
 
@@ -30,6 +31,7 @@ export class FoosballStack extends cdk.Stack {
       partitionKey: { name: "teamId", type: dynamodb.AttributeType.STRING },
       sortKey: { name: "userId", type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      pointInTimeRecoverySpecification: { pointInTimeRecoveryEnabled: true },
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     })
 

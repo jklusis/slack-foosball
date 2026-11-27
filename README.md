@@ -181,7 +181,7 @@ Slack's certificate probe (`ssl_check=1`) is unsigned, so it is accepted after t
 
 ### Data
 
-Two on-demand DynamoDB tables. Deploying again keeps the games and ratings. `make destroy` deletes both tables with the stack.
+Two on-demand DynamoDB tables with point-in-time recovery on. Deploying again keeps the games and ratings. `make destroy` deletes both tables with the stack, and DynamoDB keeps a backup of each deleted table for 35 days that it can be restored from. A change that would replace a table, such as renaming its construct or changing its key, fails `npm run verify`.
 
 **Games.** Partition key `teamId`, sort key `gameId`. Holds phase, ordered players, round winners, channel, and the rating snapshot once completed. Button values carry `gameId`. Writes that change membership or phase use a condition so two clicks cannot drop a player or apply ratings twice.
 
