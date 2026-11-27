@@ -1,32 +1,32 @@
 import { assertNever } from "./assert-never"
 import { rateSession } from "./elo"
 import { matchRound, pairings, randomTeams, singlesMatch } from "./pairings"
-import { Reason, baseOf, requireFour, requireTwo, rosterShortfall, rosterSize } from "./types"
 import type {
   ActiveGame,
   CancelledGame,
   CompletedGame,
   DecidedRound,
   DecidedRoundOf,
+  Game,
   GameBase,
   GameFormat,
   Mode2v2,
   NewGame,
   NewGameKind,
-  RoundOf,
-  Game,
   OpenGame,
   Player,
   PlayerStanding,
   Rating,
   RejectReason,
   ReportingGame,
+  RoundOf,
   Setup2v2Game,
   Side,
   Team,
   ThreeDecided,
   ThreeRounds,
 } from "./types"
+import { baseOf, Reason, requireFour, requireTwo, rosterShortfall, rosterSize } from "./types"
 
 export type GameCommand =
   | { type: "choose2v2"; mode: Mode2v2 }
@@ -110,11 +110,7 @@ function join(game: Game, player: Player, team?: Team): ApplyResult {
   return saveGame({ ...game, players: [...game.players, player] })
 }
 
-function joinMatch(
-  game: Extract<OpenGame, { format: "match" }>,
-  player: Player,
-  team?: Team,
-): ApplyResult {
+function joinMatch(game: Extract<OpenGame, { format: "match" }>, player: Player, team?: Team): ApplyResult {
   if (!team) return reject(Reason.wrongPhase)
   const side = team === "A" ? game.teamA : game.teamB
   const other = team === "A" ? game.teamB : game.teamA
@@ -124,7 +120,12 @@ function joinMatch(
     return saveMatch(game, replacePlayer(side, player), other, team)
   }
   if (side.length >= 2) return reject(Reason.teamFull)
-  return saveMatch(game, [...side, player], other.filter((item) => item.userId !== player.userId), team)
+  return saveMatch(
+    game,
+    [...side, player],
+    other.filter((item) => item.userId !== player.userId),
+    team,
+  )
 }
 
 function saveMatch(
@@ -329,9 +330,7 @@ function saveDoubles(
   return { kind: "complete", game: completed, standings: rated.standings }
 }
 
-function decidedSingle(
-  round: RoundOf<"singles"> | undefined,
-): DecidedRoundOf<"singles"> | undefined {
+function decidedSingle(round: RoundOf<"singles"> | undefined): DecidedRoundOf<"singles"> | undefined {
   if (!round || round.winner === null) return undefined
   return { home: round.home, away: round.away, winner: round.winner }
 }

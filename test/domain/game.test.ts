@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vitest"
 import { apply } from "../../src/domain/game"
-import { Reason } from "../../src/domain/types"
 import { pairings } from "../../src/domain/pairings"
 import type { ActiveGame, FourPlayers, Game, OpenGame, ReportingGame, Setup2v2Game } from "../../src/domain/types"
-import { requireFour } from "../../src/domain/types"
+import { Reason, requireFour } from "../../src/domain/types"
 import { player } from "../helpers"
 
 const ada = player("A", "Ada")

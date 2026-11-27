@@ -5,12 +5,7 @@ import { player } from "../helpers"
 
 describe("pairings", () => {
   it("partners every player with every other player once", () => {
-    const players: FourPlayers = [
-      player("A"),
-      player("B"),
-      player("C"),
-      player("D"),
-    ]
+    const players: FourPlayers = [player("A"), player("B"), player("C"), player("D")]
     const rounds = pairings(players)
     const partners = rounds.flatMap((round) => [
       pair(round.home[0].userId, round.home[1].userId),

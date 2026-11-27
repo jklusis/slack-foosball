@@ -9,9 +9,7 @@ import { player } from "../helpers"
 const roster = [player("A", "Ada"), player("B", "Ben"), player("C", "Cia"), player("D", "Dan")]
 
 function actionIds(blocks: Block[]): string[] {
-  return blocks.flatMap((block) =>
-    block.type === "actions" ? block.elements.map((element) => element.action_id) : [],
-  )
+  return blocks.flatMap((block) => (block.type === "actions" ? block.elements.map((element) => element.action_id) : []))
 }
 
 function flatRatings(players: FourPlayers): [RatingChange, RatingChange, RatingChange, RatingChange] {
@@ -26,9 +24,7 @@ function flatRatings(players: FourPlayers): [RatingChange, RatingChange, RatingC
 }
 
 function buttonLabels(blocks: Block[]): string[] {
-  return blocks.flatMap((block) =>
-    block.type === "actions" ? block.elements.map((element) => element.text.text) : [],
-  )
+  return blocks.flatMap((block) => (block.type === "actions" ? block.elements.map((element) => element.text.text) : []))
 }
 
 function buttonsUnder(blocks: Block[], heading: string): string[] {
@@ -55,12 +51,7 @@ describe("renderGame", () => {
       format: "2v2",
       players: [],
     })
-    expect(actionIds(view.blocks)).toEqual([
-      "game_2v2_random",
-      "game_2v2_teams",
-      "game_2v2_long",
-      "game_cancel",
-    ])
+    expect(actionIds(view.blocks)).toEqual(["game_2v2_random", "game_2v2_teams", "game_2v2_long", "game_cancel"])
     expect(buttonLabels(view.blocks)).toEqual([
       "Single 2v2 game, random assignments",
       "Single 2v2 game, manual team join",
@@ -135,13 +126,7 @@ describe("renderGame", () => {
       format: "doubles",
       players: roster,
     })
-    expect(actionIds(full.blocks)).toEqual([
-      "game_start",
-      "game_notify",
-      "game_join",
-      "game_leave",
-      "game_cancel",
-    ])
+    expect(actionIds(full.blocks)).toEqual(["game_start", "game_notify", "game_join", "game_leave", "game_cancel"])
   })
 
   it("lets players join team A or team B in a 2v2, and adds start and notify when both are full", () => {
@@ -211,11 +196,7 @@ describe("renderGame", () => {
       phase: "reporting",
       format: "doubles",
       players,
-      rounds: [
-        { ...rounds[0], winner: "home" },
-        rounds[1],
-        rounds[2],
-      ],
+      rounds: [{ ...rounds[0], winner: "home" }, rounds[1], rounds[2]],
     }
     expect(actionIds(renderGame(partial).blocks)).toEqual([
       "game_pick_home",
@@ -337,7 +318,8 @@ describe("renderGame", () => {
 
   it("numbers each game of a long session and leaves a single 2v2 unnumbered", () => {
     const players = requireFour(roster)
-    const rounds = pairings(players).map((round) => ({ ...round, winner: "home" as const }))
+    const [first, second, third] = pairings(players).map((round) => ({ ...round, winner: "home" as const }))
+    if (!first || !second || !third) throw new Error("expected three games")
     const long = renderGame({
       id: "g1",
       teamId: "T1",
@@ -346,7 +328,7 @@ describe("renderGame", () => {
       phase: "completed",
       format: "doubles",
       players,
-      rounds: [rounds[0]!, rounds[1]!, rounds[2]!],
+      rounds: [first, second, third],
       ratingChanges: flatRatings(players),
     })
     expect(textOf(long.blocks)).toContain("1. <@A> + <@B> beat <@C> + <@D>")
@@ -376,21 +358,27 @@ describe("renderLadder", () => {
     expect(empty).toContain("*2v2*\nNo active players.")
     expect(empty).toContain("*1v1*\nNo active players.")
     expect(empty).not.toContain("name, ELO, games, wins, losses")
-    const view = renderLadder({
-      doubles: [
-        { userId: "B", displayName: "Ben", elo: 984, wins: 1, losses: 2 },
-        { userId: "A", displayName: "Ada", elo: 1048, wins: 3, losses: 0 },
-      ],
-      singles: [{ userId: "C", displayName: "Cia", elo: 1016, wins: 1, losses: 0 }],
-    }, 30)
+    const view = renderLadder(
+      {
+        doubles: [
+          { userId: "B", displayName: "Ben", elo: 984, wins: 1, losses: 2 },
+          { userId: "A", displayName: "Ada", elo: 1048, wins: 3, losses: 0 },
+        ],
+        singles: [{ userId: "C", displayName: "Cia", elo: 1016, wins: 1, losses: 0 }],
+      },
+      30,
+    )
     const text = textOf(view.blocks)
     expect(text.indexOf("*2v2*")).toBeLessThan(text.indexOf("name, ELO, games, wins, losses"))
     expect(text.indexOf("name, ELO, games, wins, losses")).toBeLessThan(text.indexOf("Ada"))
     expect(text).not.toContain("<@")
-    const onlyDoubles = renderLadder({
-      doubles: [{ userId: "A", displayName: "Ada", elo: 1048, wins: 3, losses: 0 }],
-      singles: [],
-    }, 30)
+    const onlyDoubles = renderLadder(
+      {
+        doubles: [{ userId: "A", displayName: "Ada", elo: 1048, wins: 3, losses: 0 }],
+        singles: [],
+      },
+      30,
+    )
     expect(textOf(onlyDoubles.blocks)).toContain("*1v1*\nNo active players.")
     expect(text.indexOf("Ada")).toBeLessThan(text.indexOf("Ben"))
     expect(text.indexOf("*1v1*")).toBeGreaterThan(text.indexOf("Ben"))

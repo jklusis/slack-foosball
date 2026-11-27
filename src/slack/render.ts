@@ -1,11 +1,10 @@
 import { rankStandings } from "../domain/ladder"
-import { rosterShortfall, rosterSize } from "../domain/types"
 import type {
   ActiveGame,
   CancelledGame,
   CompletedGame,
-  GameFormat,
   Game,
+  GameFormat,
   Ladder,
   OpenGame,
   Player,
@@ -14,6 +13,7 @@ import type {
   Setup2v2Game,
   Side,
 } from "../domain/types"
+import { rosterShortfall, rosterSize } from "../domain/types"
 import { actionId, encodePick } from "./actions"
 import { copy } from "./copy"
 
@@ -27,9 +27,7 @@ export type Button = {
   text: { type: "plain_text"; text: string; emoji: true }
 }
 
-export type Block =
-  | { type: "section"; text: SlackText; expand: true }
-  | { type: "actions"; elements: Button[] }
+export type Block = { type: "section"; text: SlackText; expand: true } | { type: "actions"; elements: Button[] }
 
 export type SlackView = {
   text: string
@@ -166,10 +164,7 @@ function renderReporting(game: ReportingGame): SlackView {
     const roundIndex = asRoundIndex(index)
     if (game.rounds.length > 1) blocks.push(section(`*Game ${index + 1}*`))
     blocks.push(
-      actions([
-        sideButton(game.id, roundIndex, "home", round),
-        sideButton(game.id, roundIndex, "away", round),
-      ]),
+      actions([sideButton(game.id, roundIndex, "home", round), sideButton(game.id, roundIndex, "away", round)]),
     )
   })
   if (game.rounds.every((round) => round.winner !== null)) {
@@ -277,12 +272,7 @@ function actions(elements: Button[]): Block {
   return { type: "actions", elements }
 }
 
-function button(
-  id: string,
-  label: string,
-  value: string,
-  style?: "primary" | "danger",
-): Button {
+function button(id: string, label: string, value: string, style?: "primary" | "danger"): Button {
   const element: Button = {
     type: "button",
     action_id: id,

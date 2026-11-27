@@ -28,12 +28,7 @@ describe("handle", () => {
     expect(response).toEqual({ statusCode: 200, body: "" })
     expect(messages[0]?.channelId).toBe("C1")
     expect(messages[0]?.text).toBe("New 2v2")
-    expect(idsOf(messages[0]?.blocks)).toEqual([
-      "game_2v2_random",
-      "game_2v2_teams",
-      "game_2v2_long",
-      "game_cancel",
-    ])
+    expect(idsOf(messages[0]?.blocks)).toEqual(["game_2v2_random", "game_2v2_teams", "game_2v2_long", "game_cancel"])
     const stored = await repo.get("T1", "game-1")
     expect(stored?.game).toMatchObject({ phase: "setup", format: "2v2", players: [], createdBy: "U1" })
   })
@@ -171,7 +166,13 @@ describe("handle", () => {
     )
     expect(encoded.statusCode).toBe(200)
     const other = await handle(
-      event(JSON.stringify({ type: "event_callback", team_id: "T1", event: { type: "message", channel: "C1", text: "1v1" } })),
+      event(
+        JSON.stringify({
+          type: "event_callback",
+          team_id: "T1",
+          event: { type: "message", channel: "C1", text: "1v1" },
+        }),
+      ),
       deps,
     )
     expect(other).toEqual({ statusCode: 200, body: "" })
@@ -215,7 +216,9 @@ describe("handle", () => {
     expect(response).toEqual({ statusCode: 200, body: "" })
     expect(notes[0]).toEqual({ channelId: "C1", userId: "E", text: copy.gameFull })
     expect(updates).toEqual([])
-    expect((await repo.get("T1", "game-1"))?.game.phase === "open" && (await repo.get("T1", "game-1"))?.game.players).toHaveLength(4)
+    expect(
+      (await repo.get("T1", "game-1"))?.game.phase === "open" && (await repo.get("T1", "game-1"))?.game.players,
+    ).toHaveLength(4)
 
     await repo.create({
       id: "game-2",
@@ -265,7 +268,7 @@ describe("handle", () => {
       ],
     })
     const stored = await repo.get("T1", "game-1")
-    if (!stored || stored.game.phase !== "reporting") throw new Error("expected reporting")
+    if (stored?.game.phase !== "reporting") throw new Error("expected reporting")
     const rated = apply(stored.game, { type: "save", userId: "A", ratings: new Map() })
     if (rated.kind !== "complete") throw new Error("expected complete")
     await repo.complete(stored.version, rated.game, rated.standings, nowMs)
@@ -306,7 +309,7 @@ describe("handle", () => {
       rounds: [{ home: [ada], away: [ben], winner: "home" }],
     })
     const stored = await repo.get("T1", "game-1")
-    if (!stored || stored.game.phase !== "reporting") throw new Error("expected reporting")
+    if (stored?.game.phase !== "reporting") throw new Error("expected reporting")
     const rated = apply(stored.game, { type: "save", userId: "A", ratings: new Map() })
     if (rated.kind !== "complete") throw new Error("expected complete")
     await repo.complete(stored.version, rated.game, rated.standings, nowMs - 31 * 24 * 60 * 60 * 1000)

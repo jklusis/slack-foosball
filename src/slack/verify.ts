@@ -14,9 +14,7 @@ export function verifySlackRequest(input: {
   const issuedAt = Number(timestamp)
   if (!Number.isFinite(issuedAt)) return false
   if (Math.abs(nowMs / 1000 - issuedAt) > MAX_SKEW_SECONDS) return false
-  const expected = `v0=${createHmac("sha256", signingSecret)
-    .update(`v0:${timestamp}:${rawBody}`)
-    .digest("hex")}`
+  const expected = `v0=${createHmac("sha256", signingSecret).update(`v0:${timestamp}:${rawBody}`).digest("hex")}`
   return safeEqual(expected, signature)
 }
 

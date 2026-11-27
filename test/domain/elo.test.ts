@@ -8,20 +8,13 @@ const ben = player("B", "Ben")
 const cia = player("C", "Cia")
 const dan = player("D", "Dan")
 
-function round(
-  home: [typeof ada, typeof ben],
-  away: [typeof cia, typeof dan],
-  winner: "home" | "away",
-): DecidedRound {
+function round(home: [typeof ada, typeof ben], away: [typeof cia, typeof dan], winner: "home" | "away"): DecidedRound {
   return { home, away, winner }
 }
 
 describe("rateRound", () => {
   it("moves an even game by 16 points", () => {
-    const rated = rateRound(
-      round([ada, ben], [cia, dan], "home"),
-      new Map<string, Rating>(),
-    )
+    const rated = rateRound(round([ada, ben], [cia, dan], "home"), new Map<string, Rating>())
     expect(rated.get("A")).toMatchObject({ elo: 1016, wins: 1, losses: 0 })
     expect(rated.get("B")).toMatchObject({ elo: 1016, wins: 1, losses: 0 })
     expect(rated.get("C")).toMatchObject({ elo: 984, wins: 0, losses: 1 })

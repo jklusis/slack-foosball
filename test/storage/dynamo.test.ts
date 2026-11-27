@@ -3,7 +3,7 @@ import { apply } from "../../src/domain/game"
 import { pairings } from "../../src/domain/pairings"
 import type { OpenGame, ReportingGame, Setup2v2Game } from "../../src/domain/types"
 import { requireFour } from "../../src/domain/types"
-import { DynamoRepository, type DocumentSender } from "../../src/storage/dynamo"
+import { type DocumentSender, DynamoRepository } from "../../src/storage/dynamo"
 import { player } from "../helpers"
 
 const playedAt = Date.UTC(2026, 9, 1)
@@ -40,9 +40,7 @@ describe("DynamoRepository", () => {
       players: [],
     }
     const created = await repo.create(open)
-    expect(await repo.compareAndSwap(created.version + 5, { ...open, players: [player("A")] })).toBe(
-      "conflict",
-    )
+    expect(await repo.compareAndSwap(created.version + 5, { ...open, players: [player("A")] })).toBe("conflict")
     expect((await repo.get("T1", "game-1"))?.game.players).toEqual([])
 
     const players = requireFour([player("A"), player("B"), player("C"), player("D")])

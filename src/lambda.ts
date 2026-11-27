@@ -1,5 +1,5 @@
-import { handle } from "./handler"
 import { loadConfig } from "./config"
+import { handle } from "./handler"
 import { slackChannelPoster } from "./slack/chat"
 import { fetchPoster } from "./slack/reply"
 import { DynamoRepository } from "./storage/dynamo"

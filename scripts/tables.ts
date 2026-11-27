@@ -16,8 +16,7 @@ export function dynamoTableNames(resources: readonly StackResource[]): string[] 
 
 export function playersTableName(resources: readonly StackResource[]): string | undefined {
   return resources.find(
-    (resource) =>
-      resource.ResourceType === "AWS::DynamoDB::Table" && resource.LogicalResourceId?.startsWith("Players"),
+    (resource) => resource.ResourceType === "AWS::DynamoDB::Table" && resource.LogicalResourceId?.startsWith("Players"),
   )?.PhysicalResourceId
 }
 

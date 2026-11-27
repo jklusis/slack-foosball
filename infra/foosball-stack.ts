@@ -3,7 +3,7 @@ import * as dynamodb from "aws-cdk-lib/aws-dynamodb"
 import * as lambda from "aws-cdk-lib/aws-lambda"
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs"
 import * as logs from "aws-cdk-lib/aws-logs"
-import { Construct } from "constructs"
+import type { Construct } from "constructs"
 import { MANAGED_BY_TAG } from "./tags"
 
 export type FoosballStackProps = cdk.StackProps & {

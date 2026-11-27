@@ -3,9 +3,9 @@ import { handleAction } from "./app/session"
 import { newGame } from "./domain/game"
 import { activeLadder } from "./domain/ladder"
 import { Reason } from "./domain/types"
-import { rejectionText } from "./slack/copy"
-import { parseSlackBody, type ParsedSlack } from "./slack/parse"
 import type { ChannelPoster } from "./slack/chat"
+import { rejectionText } from "./slack/copy"
+import { type ParsedSlack, parseSlackBody } from "./slack/parse"
 import {
   renderGame,
   renderHelp,
@@ -47,9 +47,7 @@ export async function handle(event: unknown, deps: Deps): Promise<HttpResult> {
   if (!safeEqual(incoming.query.key ?? "", deps.config.apiKey)) return text(401, "")
 
   // Slack signs the exact request bytes. Decode base64 first and verify that string.
-  const rawBody = incoming.isBase64Encoded
-    ? Buffer.from(incoming.body, "base64").toString("utf8")
-    : incoming.body
+  const rawBody = incoming.isBase64Encoded ? Buffer.from(incoming.body, "base64").toString("utf8") : incoming.body
   // Slack's certificate probe is unsigned. The query key still has to match.
   if (new URLSearchParams(rawBody).get("ssl_check") === "1") return text(200, "")
 
@@ -151,12 +149,7 @@ async function note(
   })
 }
 
-async function say(
-  channel: ChannelPoster,
-  channelId: string,
-  view: SlackView,
-  threadTs?: string,
-): Promise<HttpResult> {
+async function say(channel: ChannelPoster, channelId: string, view: SlackView, threadTs?: string): Promise<HttpResult> {
   try {
     // Ack only after the post. A non-200 makes Slack retry the mention or click.
     await channel.post(channelId, view, threadTs)
@@ -166,11 +159,7 @@ async function say(
   return text(200, "")
 }
 
-async function ack(
-  poster: SlackPoster,
-  url: string,
-  body: Record<string, unknown>,
-): Promise<HttpResult> {
+async function ack(poster: SlackPoster, url: string, body: Record<string, unknown>): Promise<HttpResult> {
   try {
     // Ack only after the message update. Returning non-200 makes Slack retry the click.
     await poster.post(url, body)
