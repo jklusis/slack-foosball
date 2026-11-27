@@ -1,0 +1,22 @@
+# Version updates wait 3 days after a release, because a review can't tell a fresh malicious
+# version of a familiar package from a good one. Security updates don't wait.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 3
+    groups:
+      npm:
+        update-types: [minor, patch]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 3
+    groups:
+      actions:
+        update-types: [minor, patch]
