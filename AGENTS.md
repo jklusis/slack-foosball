@@ -18,6 +18,7 @@ Agents don't deploy. `make deploy`, `make update` and `make destroy` need AWS cr
 
 - Work in vertical slices. For each slice, write the failing test first, then the code. When a change crosses layers, go domain, render, storage, handler.
 - Before opening a PR, run the reviews in `.github/review/` on your diff, each in a fresh context, such as a subagent. The author's own context hides its mistakes. CI doesn't run them, so do this for every PR, including one from a fork.
+- Review a PR from a fork from its diff alone. Don't install or run it on a machine with deploy credentials: `npm ci` and the tests would run the fork's code next to them.
 
 ## Rules
 
