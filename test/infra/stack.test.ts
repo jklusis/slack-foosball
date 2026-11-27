@@ -51,7 +51,7 @@ describe("FoosballStack", () => {
     )
   })
 
-  it("keeps both tables under the same ids and keys, with point-in-time recovery on", () => {
+  it("keeps both tables from being replaced, with point-in-time recovery on", () => {
     const app = new App({ outdir: mkdtempSync(join(tmpdir(), "foosball-cdk-")) })
     const stack = new FoosballStack(app, "Foosball", {
       apiKey: "test-api-key",
@@ -61,15 +61,23 @@ describe("FoosballStack", () => {
     const tables = Template.fromStack(stack).findResources("AWS::DynamoDB::Table")
     // A new logical id makes CloudFormation create a new table and delete the old one, with every rating in it.
     expect(Object.keys(tables).sort()).toEqual(["Games1C5D5B9B", "PlayersCF26CFA0"])
-    // A new key schema replaces the table under the same id.
-    expect(tables.Games1C5D5B9B?.Properties.KeySchema).toEqual([
-      { AttributeName: "teamId", KeyType: "HASH" },
-      { AttributeName: "gameId", KeyType: "RANGE" },
-    ])
-    expect(tables.PlayersCF26CFA0?.Properties.KeySchema).toEqual([
-      { AttributeName: "teamId", KeyType: "HASH" },
-      { AttributeName: "userId", KeyType: "RANGE" },
-    ])
+    // These replace the table under the same id: a new key, a new key type, a fixed name, or a local secondary index.
+    const keys = { Games1C5D5B9B: "gameId", PlayersCF26CFA0: "userId" }
+    for (const [id, sortKey] of Object.entries(keys)) {
+      const properties = tables[id]?.Properties
+      expect(properties.KeySchema).toEqual([
+        { AttributeName: "teamId", KeyType: "HASH" },
+        { AttributeName: sortKey, KeyType: "RANGE" },
+      ])
+      expect(properties.AttributeDefinitions).toEqual(
+        expect.arrayContaining([
+          { AttributeName: "teamId", AttributeType: "S" },
+          { AttributeName: sortKey, AttributeType: "S" },
+        ]),
+      )
+      expect(properties.TableName).toBeUndefined()
+      expect(properties.LocalSecondaryIndexes).toBeUndefined()
+    }
     for (const table of Object.values(tables)) {
       expect(table.Properties.PointInTimeRecoverySpecification).toEqual({ PointInTimeRecoveryEnabled: true })
     }
