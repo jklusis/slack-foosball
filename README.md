@@ -281,7 +281,7 @@ CloudFormation asks for confirmation, then deletes the Lambda, the function URL,
 | Ratings | Separate 1v1 and 2v2 ladders. Average team rating, K=32, integer, applied per game in order |
 | Pairings | A random-teams 2v2 draws its teams at start. A chosen-teams 2v2 is Team A vs Team B. A 2v2 long game rotates partners from join order. A 1v1 is one game |
 | Draws, editing a finished game | Out of scope |
-| CI | None. Deploy from a laptop with shell credentials. |
+| CI | GitHub Actions runs `npm run verify` and a dependency review on every PR. Agentic reviews run locally before a PR, not in CI. Deploys still run from a laptop with shell credentials. |
 
 ## License
 
@@ -291,4 +291,4 @@ The usual MIT, Apache, and GPL licenses allow that kind of sale, so this project
 
 ## Out of scope
 
-Draws, seasons, manual rating edits, scheduled reminders, pinning the bot to one channel name, Secrets Manager, provisioned concurrency, and GitHub Actions.
+Draws, seasons, manual rating edits, scheduled reminders, pinning the bot to one channel name, Secrets Manager, provisioned concurrency, and deploying from CI.
